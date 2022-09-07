@@ -13,6 +13,7 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
     end_year   = 2300
 
     # Set RCP Scenario (current options = "rcp85").
+    
     rcp_scenario = "rcp85"
 
 #####################################################################################################
@@ -30,13 +31,14 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
     conc = raw_conc[(raw_conc[!,"v YEARS/GAS >"].>=start_year) .& (raw_conc[!,"v YEARS/GAS >"].<=end_year),:]
 
     #Subtract CO2 RF from Total Anthropogenic RF to avoid double counting.
-    exogenous_rf = ???
+    exogenous_rf = radforc[!,"TOTAL_ANTHRO_RF"] - radforc[!,"CO2_RF"]
 
     #Add fossil fuel and land use change + other sources CO2 emissions together.
-    co2_emissions = ???
+    co2_emissions = emiss[!, "FossilCO2"] + emiss[!, "OtherCO2"]
 
     #Get N2O concentrations (used in CO2 radiative forcing calculations).
-    N2O_conc = ???
+    N2O_conc = conc[!, "N2O"]
+    #N2O_conc[3]
 
 #######################################################################################################
 # SET MODEL PARAMETER VALUES
@@ -51,24 +53,24 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
 
     # ----Parameters----#
     CO2_0   = 278.0                             # Pre-industrial atmospheric concentration of CO2.
-    r0      = ???                               # Pre-industrial iIRF100.
-    rC      = ???                               # Increase in iIRF100 with cumulative carbon uptake (yr/GtC).
-    rT      = ???                               # Increase in iIRF100 with warming (yr/C).
-    a       = [??, ??, ??, ??]                  # Fraction of emissions entering each carbon pool (geological reabsorption[1], deep ocean invasion/equilibration[2], biospheric uptake/ocean thermocline invasion[3], rapid biospheric uptake/ocean mixed-layer invasion[4]).
-    tau     = [??, ??, ??, ??]                  # Decay time constants for each carbon pool in 'a'.
+    r0      = 32.40                               # Pre-industrial iIRF100.
+    rC      = 0.019                               # Increase in iIRF100 with cumulative carbon uptake (yr/GtC).
+    rT      = 4.165                             # Increase in iIRF100 with warming (yr/C).
+    a       = [0.2173,  0.2240, 0.2824, 0.2763]                  # Fraction of emissions entering each carbon pool (geological reabsorption[1], deep ocean invasion/equilibration[2], biospheric uptake/ocean thermocline invasion[3], rapid biospheric uptake/ocean mixed-layer invasion[4]).
+    tau     = [10^6, 394.4, 36.54, 4.304]                  # Decay time constants for each carbon pool in 'a'.
     ppm2gtc = 2.123                             # Conversion factor between ppm and GtC (with 1 ppm = 2.123 GtC).
-
+    
     #------------------------------
     # Climate Dynamics
     #------------------------------
 
     # ----Parameters----#
-    a1    = ???             # CO2 raditive forcing constant.
-    b1    = ???             # CO2 raditive forcing constant.
-    c1    = ???             # CO2 raditive forcing constant.
-    N2O_0 = ???             # Pre-industrial atmospheric concentration of N2O.
-    q     = [??, ??]        # q1 (thermal equilibration of deep ocean) & q2 (thermal adjustment of upper ocean) in KW-1 m2.
-    d     = [??, ??]        # d1 (thermal equilibration of deep ocean) & d2 (thermal adjustment of upper ocean) in years.
+    a1    = -2.410*10^-7             # CO2 raditive forcing constant.
+    b1    = 7.2*10^-4             # CO2 raditive forcing constant.
+    c1    = -2.1*10^-4             # CO2 raditive forcing constant.
+    N2O_0 = 270             # Pre-industrial atmospheric concentration of N2O.
+    q     = [ 0.33, 0.41]        # q1 (thermal equilibration of deep ocean) & q2 (thermal adjustment of upper ocean) in KW-1 m2.
+    d     = [230, 4.1]        # d1 (thermal equilibration of deep ocean) & d2 (thermal adjustment of upper ocean) in years.
 
 
 #####################################################################################################
@@ -135,7 +137,7 @@ function run_model(CO2_emiss)
             #--------------------------------#
             # Equation 8 in FAIR
             # Hint: You will need to use "Cacc" and "temperature" output from period 't-1'.
-            iIRFT100 = ???
+            iIRFT100 = r0 +rC*output[t-1,"Cacc"] + rT*output[t-1,"temperature"]
 
             # Set an upper bound to avoid unstable/non-physical results.  Not in paper, taken from original FAIR source code.
             if iIRFT100 >= 97.0 
@@ -153,14 +155,17 @@ function run_model(CO2_emiss)
             end
 
             # Calculate the change in CO2 concentrations across all pools and the current atmospheric concentration.
-            output[t,"CO2"] = ???
+            output[t,"CO2"] = output[t-1,"CO2"] + output[t,"R1"] + output[t,"R2"] + output[t,"R3"] + output[t,"R4"]
+            #println(output[t,"CO2"] - CO2_0)
+
 
             # Calculate accumulated perturbation of carbon stock.
             # See top of right column on page 7216
             # Hint, use Cacc[t-1] and just add on the result of that equation for the current period
             # Hint2, Cacc is in GtC, but CO2 concentrations are in ppm, so will need to convert them to GtC (we have a parameter for this).
-            output[t,"Cacc"] = output[t-1,"Cacc"] + CO2_emiss[t] - (output[t,"CO2"] - output[t-1,"CO2"]) * ppm2gtc
-
+            output[t,"Cacc"] = output[t-1,"Cacc"] + (sum(CO2_emiss[1:t]) - (output[t,"CO2"] - CO2_0)) * ppm2gtc
+            #println(output[t,"Cacc"])
+            #println((sum(CO2_emiss[1:t]) - (output[t,"CO2"] - CO2_0)))
 
             #------------------------------------#
             #---- CLIMATE DYNAMICS EQUATIONS ----#
@@ -170,12 +175,12 @@ function run_model(CO2_emiss)
             N_hat = 0.5 * (N2O_conc[t] + N2O_0)
             CO2_diff = output[t,"CO2"] - CO2_0
 
-           # Calculate CO2 radiative forcing.
+           # Calculate CO2 radiative forcing
 # HINT: See Table 1 in the the paper, "Radiative forcing of carbon dioxide, methane, and nitrous oxide: a significant revision of the methane radiative forcing."
-            output[t,"CO2_rf"] = ???
+            output[t,"CO2_rf"] = (a1*(CO2_diff)^2 +b1*abs(CO2_diff) + c1*N_hat +5.36)*log(output[t,"CO2"]/CO2_0)
             # Calculate total radiative forcing.
 # HINT: Don't forget about exogenous sources of radiative forcing that we are not explicitly calculating.
-            output[t,"total_rf"] = ???
+            output[t,"total_rf"] = output[t,"CO2_rf"] + exogenous_rf[t]
 
             # Calculate temperature change for the two different thermal response times.
             output[t,"temp_j1"] = output[t-1,"temp_j1"] * exp((-1.0)/d[1]) + 0.5 * q[1] * (output[t-1,"total_rf"] + output[t,"total_rf"]) * (1 - exp((-1.0)/d[1]))
@@ -183,7 +188,8 @@ function run_model(CO2_emiss)
 
             #Calculate global mean surface temperature anomaly
 #LESS USEFUL HINT: the equation is in the FAIR paper.
-            output[t,"temperature"] = ???
+            output[t,"temperature"] = output[t,"temp_j1"] + output[t,"temp_j2"]
+            #println(output[t,"temperature"])
         
             end
         end
@@ -191,8 +197,14 @@ function run_model(CO2_emiss)
     return(output)
 end
 
-HadCRUT5 = DataFrame(CSV.File(normpath(@__DIR__,"..","data", ("HadCRUT.5.0.1.0.summary_series.global.annual.csv")), skipto=2, header = 1))    
+my_results = run_model(co2_emissions)
+sum(co2_emissions[1:3])
+co2_emissions
+
+HadCRUT5 = DataFrame(CSV.File(normpath(@__DIR__,"..","data", ("HadCRUT.5.0.1.0.analysis.summary_series.global.annual.csv")), skipto=2, header = 1))    
 HadCRUT5_normalised = HadCRUT5 .- HadCRUT5[1,2]
+
+
 #########################################################################################
 # Example of how to run model
 #########################################################################################
@@ -208,3 +220,30 @@ HadCRUT5_normalised = HadCRUT5 .- HadCRUT5[1,2]
 # (3) There are lots of ways to access your results. For instance, this would plot the temperature.
 #
 #   plot(MyResults[1:172,"years"], MyResults[1:172,"temperature"],  title = "Global av Temperature above pre-industrial", label = "Our model", ylab="degrees C")
+
+my_results = run_model(co2_emissions)
+
+x = my_results[1:172,"years"]
+y = my_results[1:172,"temperature"]
+plot(x,y,  title = "Global av Temperature above pre-industrial", label = "Our model", ylab="degrees C")
+
+
+#question1
+q1_co2 = copy(co2_emissions)
+q1_co2[166] = q1_co2[166]+100
+
+q1_results = run_model(q1_co2)
+x_all = my_results[!,"years"]
+y1 = my_results[!,"temperature"]
+y2 = q1_results[!,"temperature"]
+plot([x_all,x_all],[y1,y2],  title = "Global av Temperature above pre-industrial", label = "Our model", ylab="degrees C")
+
+
+#question2
+y3 = HadCRUT5_normalised[1:172,"Anomaly (deg C)"]
+plot([x,x],[y,y3],  title = "Global av Temperature above pre-industrial", label = "Our model", ylab="degrees C")
+
+HadCRUT5_normalised
+
+y
+my_results[1:172, "temp_j1"]
