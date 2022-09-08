@@ -155,7 +155,7 @@ function run_model(CO2_emiss)
             end
 
             # Calculate the change in CO2 concentrations across all pools and the current atmospheric concentration.
-            output[t,"CO2"] = output[t-1,"CO2"] + output[t,"R1"] + output[t,"R2"] + output[t,"R3"] + output[t,"R4"]
+            output[t,"CO2"] = CO2_0 + output[t,"R1"] + output[t,"R2"] + output[t,"R3"] + output[t,"R4"]
             #println(output[t,"CO2"] - CO2_0)
 
 
@@ -198,8 +198,7 @@ function run_model(CO2_emiss)
 end
 
 my_results = run_model(co2_emissions)
-sum(co2_emissions[1:3])
-co2_emissions
+
 
 HadCRUT5 = DataFrame(CSV.File(normpath(@__DIR__,"..","data", ("HadCRUT.5.0.1.0.analysis.summary_series.global.annual.csv")), skipto=2, header = 1))    
 HadCRUT5_normalised = HadCRUT5 .- HadCRUT5[1,2]
@@ -234,16 +233,21 @@ q1_co2[166] = q1_co2[166]+100
 
 q1_results = run_model(q1_co2)
 x_all = my_results[!,"years"]
-y1 = my_results[!,"temperature"]
-y2 = q1_results[!,"temperature"]
-plot([x_all,x_all],[y1,y2],  title = "Global av Temperature above pre-industrial", label = "Our model", ylab="degrees C")
+y0 = my_results[!,"temperature"]
+y1 = q1_results[!,"temperature"]
+plot(x_all,[y1,y2],  title = "Global av Temperature above pre-industrial", label = ["Our model" "2015 CO2 Pulse"], ylab="degrees C")
 
 
 #question2
-y3 = HadCRUT5_normalised[1:172,"Anomaly (deg C)"]
-plot([x,x],[y,y3],  title = "Global av Temperature above pre-industrial", label = "Our model", ylab="degrees C")
+y2 = HadCRUT5_normalised[1:172,"Anomaly (deg C)"]
+plot(x,[y,y2],  title = "Global av Temperature above pre-industrial", label = ["Our model" "HadCRUT Data"], ylab="degrees C")
 
-HadCRUT5_normalised
+#question3
 
-y
-my_results[1:172, "temp_j1"]
+#question4
+emiss[172,"v YEARS/GAS >"]
+q4_co2 = zeros(size(q4_co2))
+q4_co2[1:172] = co2_emissions[1:172]
+q4_results = run_model(q4_co2)
+y4 = q4_results[!,"temperature"]
+plot(x_all,y4,  title = "Global av Temperature above pre-industrial with 0 emissions after 2020", label = "Our model", ylab="degrees C")
