@@ -21,24 +21,46 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
 #####################################################################################################
 
     #Read in radiative forcing and emissions data for RCP Scenario.
-    raw_radforc = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_MIDYEAR_RADFORCING.csv")), skipto=60, header = 59) |> DataFrame
-    raw_emiss   = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_EMISSIONS.csv")), skipto=38, header = 37) |> DataFrame
-    raw_conc    = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_MIDYEAR_CONCENTRATIONS.csv")), skipto=39, header = 38) |> DataFrame
+    raw_radforc8 = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_MIDYEAR_RADFORCING.csv")), skipto=60, header = 59) |> DataFrame
+    raw_emiss8   = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_EMISSIONS.csv")), skipto=38, header = 37) |> DataFrame
+    raw_conc8    = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_MIDYEAR_CONCENTRATIONS.csv")), skipto=39, header = 38) |> DataFrame
 
     #Isolate data for the years model will be run.
-    radforc = raw_radforc[(raw_radforc[!,"v YEARS/GAS >"].>=start_year) .& (raw_radforc[!,"v YEARS/GAS >"].<=end_year),:]
-    emiss = raw_emiss[(raw_emiss[!,"v YEARS/GAS >"].>=start_year) .& (raw_emiss[!,"v YEARS/GAS >"].<=end_year),:]
-    conc = raw_conc[(raw_conc[!,"v YEARS/GAS >"].>=start_year) .& (raw_conc[!,"v YEARS/GAS >"].<=end_year),:]
+    radforc8 = raw_radforc8[(raw_radforc[!,"v YEARS/GAS >"].>=start_year) .& (raw_radforc[!,"v YEARS/GAS >"].<=end_year),:]
+    emiss8 = raw_emis8[(raw_emiss[!,"v YEARS/GAS >"].>=start_year) .& (raw_emiss[!,"v YEARS/GAS >"].<=end_year),:]
+    conc8 = raw_conc8[(raw_conc[!,"v YEARS/GAS >"].>=start_year) .& (raw_conc[!,"v YEARS/GAS >"].<=end_year),:]
 
     #Subtract CO2 RF from Total Anthropogenic RF to avoid double counting.
-    exogenous_rf = radforc[!,"TOTAL_ANTHRO_RF"] - radforc[!,"CO2_RF"]
+    exogenous_rf8 = radforc8[!,"TOTAL_ANTHRO_RF"] - radforc8[!,"CO2_RF"]
 
     #Add fossil fuel and land use change + other sources CO2 emissions together.
-    co2_emissions = emiss[!, "FossilCO2"] + emiss[!, "OtherCO2"]
+    co2_emissions8 = emiss8[!, "FossilCO2"] + emiss8[!, "OtherCO2"]
 
     #Get N2O concentrations (used in CO2 radiative forcing calculations).
-    N2O_conc = conc[!, "N2O"]
+    N2O_conc = conc8[!, "N2O"]
     #N2O_conc[3]
+
+    co2_emissions = co2_emissions8
+    #########################################################################################
+    # RCP 3
+    rcp_scenario = "rcp3PD"
+    raw_radforc3 = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_MIDYEAR_RADFORCING.csv")), skipto=60, header = 59) |> DataFrame
+    raw_emiss3   = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_EMISSIONS.csv")), skipto=38, header = 37) |> DataFrame
+    raw_conc3    = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_MIDYEAR_CONCENTRATIONS.csv")), skipto=39, header = 38) |> DataFrame
+
+    #Isolate data for the years model will be run.
+    radforc3 = raw_radforc3[(raw_radforc[!,"v YEARS/GAS >"].>=start_year) .& (raw_radforc[!,"v YEARS/GAS >"].<=end_year),:]
+    emiss3 = raw_emiss3[(raw_emiss[!,"v YEARS/GAS >"].>=start_year) .& (raw_emiss[!,"v YEARS/GAS >"].<=end_year),:]
+    conc3 = raw_conc3[(raw_conc[!,"v YEARS/GAS >"].>=start_year) .& (raw_conc[!,"v YEARS/GAS >"].<=end_year),:]
+
+    #Subtract CO2 RF from Total Anthropogenic RF to avoid double counting.
+    exogenous_rf3 = radforc3[!,"TOTAL_ANTHRO_RF"] - radforc3[!,"CO2_RF"]
+
+    #Add fossil fuel and land use change + other sources CO2 emissions together.
+    co2_emissions3 = emiss3[!, "FossilCO2"] + emiss3[!, "OtherCO2"]
+
+    #Get N2O concentrations (used in CO2 radiative forcing calculations).
+    N2O_conc3 = conc[!, "N2O"]
 
 #######################################################################################################
 # SET MODEL PARAMETER VALUES
@@ -80,7 +102,19 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
 # Argument is 'co2_emissions,' a vector of total CO2 emissions (GtCO2).
 
 # run_model = function(CO2_emiss){
-function run_model(CO2_emiss)
+function run_model(CO2_emiss, scenario)
+    #N2O_conc = N2O_conc8
+    #exogenous_rf = exogenous_rf3
+    if scenario == 3
+        N2O_conc = N2O_conc3
+        exogenous_rf = exogenous_rf3
+    if scenario == 8.5
+        N2O_conc = N2O_conc8
+        exogenous_rf = exogenous_rf8
+    end
+
+
+
     # Initialize dataframe to store results for each time step (each row is a year, each column is a new variable).
     # First set a variable to generate the appropriate number of missing/blank values
     filldf = fill(0.::Float64, end_year-start_year+1)
@@ -220,7 +254,7 @@ HadCRUT5_normalised = HadCRUT5 .- HadCRUT5[1,2]
 #
 #   plot(MyResults[1:172,"years"], MyResults[1:172,"temperature"],  title = "Global av Temperature above pre-industrial", label = "Our model", ylab="degrees C")
 
-my_results = run_model(co2_emissions)
+my_results = run_model(co2_emissions,8.5)
 
 x = my_results[1:172,"years"]
 y = my_results[1:172,"temperature"]
@@ -231,11 +265,11 @@ plot(x,y,  title = "Global av Temperature above pre-industrial", label = "Our mo
 q1_co2 = copy(co2_emissions)
 q1_co2[166] = q1_co2[166]+100
 
-q1_results = run_model(q1_co2)
+q1_results = run_model(q1_co2,8.5)
 x_all = my_results[!,"years"]
 y0 = my_results[!,"temperature"]
 y1 = q1_results[!,"temperature"]
-plot(x_all,[y1,y2],  title = "Global av Temperature above pre-industrial", label = ["Our model" "2015 CO2 Pulse"], ylab="degrees C")
+plot(x_all,[y0,y1],  title = "Global av Temperature above pre-industrial", label = ["Our model" "2015 CO2 Pulse"], ylab="degrees C")
 
 
 #question2
@@ -243,11 +277,16 @@ y2 = HadCRUT5_normalised[1:172,"Anomaly (deg C)"]
 plot(x,[y,y2],  title = "Global av Temperature above pre-industrial", label = ["Our model" "HadCRUT Data"], ylab="degrees C")
 
 #question3
+q3_results = run_model(co2_emissions,3)
+
+y3 = q3_results[!,"temperature"]
+plot(x_all,[y0,y3],  title = "Global av Temperature above pre-industrial", label = ["8.5 Model" "3 Model"], ylab="degrees C")
+
 
 #question4
 emiss[172,"v YEARS/GAS >"]
 q4_co2 = zeros(size(q4_co2))
 q4_co2[1:172] = co2_emissions[1:172]
-q4_results = run_model(q4_co2)
+q4_results = run_model(q4_co2,8.5)
 y4 = q4_results[!,"temperature"]
 plot(x_all,y4,  title = "Global av Temperature above pre-industrial with 0 emissions after 2020", label = "Our model", ylab="degrees C")
