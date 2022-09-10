@@ -27,7 +27,7 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
 
     #Isolate data for the years model will be run.
     radforc8 = raw_radforc8[(raw_radforc[!,"v YEARS/GAS >"].>=start_year) .& (raw_radforc[!,"v YEARS/GAS >"].<=end_year),:]
-    emiss8 = raw_emis8[(raw_emiss[!,"v YEARS/GAS >"].>=start_year) .& (raw_emiss[!,"v YEARS/GAS >"].<=end_year),:]
+    emiss8 = raw_emiss8[(raw_emiss[!,"v YEARS/GAS >"].>=start_year) .& (raw_emiss[!,"v YEARS/GAS >"].<=end_year),:]
     conc8 = raw_conc8[(raw_conc[!,"v YEARS/GAS >"].>=start_year) .& (raw_conc[!,"v YEARS/GAS >"].<=end_year),:]
 
     #Subtract CO2 RF from Total Anthropogenic RF to avoid double counting.
@@ -37,7 +37,7 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
     co2_emissions8 = emiss8[!, "FossilCO2"] + emiss8[!, "OtherCO2"]
 
     #Get N2O concentrations (used in CO2 radiative forcing calculations).
-    N2O_conc = conc8[!, "N2O"]
+    N2O_conc8 = conc8[!, "N2O"]
     #N2O_conc[3]
 
     co2_emissions = co2_emissions8
@@ -108,6 +108,7 @@ function run_model(CO2_emiss, scenario)
     if scenario == 3
         N2O_conc = N2O_conc3
         exogenous_rf = exogenous_rf3
+    end
     if scenario == 8.5
         N2O_conc = N2O_conc8
         exogenous_rf = exogenous_rf8
@@ -197,7 +198,7 @@ function run_model(CO2_emiss, scenario)
             # See top of right column on page 7216
             # Hint, use Cacc[t-1] and just add on the result of that equation for the current period
             # Hint2, Cacc is in GtC, but CO2 concentrations are in ppm, so will need to convert them to GtC (we have a parameter for this).
-            output[t,"Cacc"] = output[t-1,"Cacc"] + (sum(CO2_emiss[1:t]) - (output[t,"CO2"] - CO2_0)) * ppm2gtc
+            output[t,"Cacc"] = output[t-1,"Cacc"] + (CO2_emiss[t] - (output[t,"CO2"] - output[t-1,"CO2"])) * ppm2gtc
             #println(output[t,"Cacc"])
             #println((sum(CO2_emiss[1:t]) - (output[t,"CO2"] - CO2_0)))
 
@@ -231,7 +232,7 @@ function run_model(CO2_emiss, scenario)
     return(output)
 end
 
-my_results = run_model(co2_emissions)
+my_results = run_model(co2_emissions, 8.5)
 
 
 HadCRUT5 = DataFrame(CSV.File(normpath(@__DIR__,"..","data", ("HadCRUT.5.0.1.0.analysis.summary_series.global.annual.csv")), skipto=2, header = 1))    
@@ -269,18 +270,22 @@ q1_results = run_model(q1_co2,8.5)
 x_all = my_results[!,"years"]
 y0 = my_results[!,"temperature"]
 y1 = q1_results[!,"temperature"]
-plot(x_all,[y0,y1],  title = "Global av Temperature above pre-industrial", label = ["Our model" "2015 CO2 Pulse"], ylab="degrees C")
+y11 = y1-y0
+plot(x_all,y11,  title = "Difference in Global av Temp from impulse", label = "Our model", legend=:topleft, ylab="degrees C")
+
+plot(x_all[160:200],y11[160:200],  title = "Difference in Global av Temp from impulse", label = "Our model", legend=:topleft, ylab="degrees C")
 
 
 #question2
 y2 = HadCRUT5_normalised[1:172,"Anomaly (deg C)"]
-plot(x,[y,y2],  title = "Global av Temperature above pre-industrial", label = ["Our model" "HadCRUT Data"], ylab="degrees C")
+plot(x,[y,y2],  title = "Global av Temperature above pre-industrial", label = ["Our model" "HadCRUT Data"], legend=:topleft, ylab="degrees C")
 
 #question3
-q3_results = run_model(co2_emissions,3)
+q3_results = run_model(co2_emissions3,3)
 
 y3 = q3_results[!,"temperature"]
-plot(x_all,[y0,y3],  title = "Global av Temperature above pre-industrial", label = ["8.5 Model" "3 Model"], ylab="degrees C")
+plot(x_all,[y0,y3],  title = "Global av Temperature above pre-industrial", label = ["8.5 Model" "3 Model"], legend=:topleft, ylab="degrees C")
+plot(x_all,[my_results[!,"CO2"],q3_results[!,"CO2"]],  title = "Global CO2 concentration", label = ["8.5 Model" "3 Model"], legend=:topleft, ylab="ppm")
 
 
 #question4
@@ -289,4 +294,9 @@ q4_co2 = zeros(size(q4_co2))
 q4_co2[1:172] = co2_emissions[1:172]
 q4_results = run_model(q4_co2,8.5)
 y4 = q4_results[!,"temperature"]
-plot(x_all,y4,  title = "Global av Temperature above pre-industrial with 0 emissions after 2020", label = "Our model", ylab="degrees C")
+plot(x_all,y4,  title = "Global av Temperature above pre-industrial \n with 0 emissions after 2020", label = "8.5 model", legend=:topleft, ylab="degrees C")
+
+plot(x_all,[y4,y0],  title = "Global av Temperature above pre-industrial \n with 0 emissions after 2020", label = ["8.5 Model" "3 Model"], legend=:topleft, ylab="degrees C")
+
+q4_co2
+y4
