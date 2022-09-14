@@ -26,12 +26,12 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
     raw_conc8    = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_MIDYEAR_CONCENTRATIONS.csv")), skipto=39, header = 38) |> DataFrame
 
     #Isolate data for the years model will be run.
-    radforc8 = raw_radforc8[(raw_radforc[!,"v YEARS/GAS >"].>=start_year) .& (raw_radforc[!,"v YEARS/GAS >"].<=end_year),:]
-    emiss8 = raw_emiss8[(raw_emiss[!,"v YEARS/GAS >"].>=start_year) .& (raw_emiss[!,"v YEARS/GAS >"].<=end_year),:]
-    conc8 = raw_conc8[(raw_conc[!,"v YEARS/GAS >"].>=start_year) .& (raw_conc[!,"v YEARS/GAS >"].<=end_year),:]
+    radforc8 = raw_radforc8[(raw_radforc8[!,"v YEARS/GAS >"].>=start_year) .& (raw_radforc8[!,"v YEARS/GAS >"].<=end_year),:]
+    emiss8 = raw_emiss8[(raw_emiss8[!,"v YEARS/GAS >"].>=start_year) .& (raw_emiss8[!,"v YEARS/GAS >"].<=end_year),:]
+    conc8 = raw_conc8[(raw_conc8[!,"v YEARS/GAS >"].>=start_year) .& (raw_conc8[!,"v YEARS/GAS >"].<=end_year),:]
 
     #Subtract CO2 RF from Total Anthropogenic RF to avoid double counting.
-    exogenous_rf8 = radforc8[!,"TOTAL_ANTHRO_RF"] - radforc8[!,"CO2_RF"]
+    exogenous_rf8 = radforc8[!,"TOTAL_INCLVOLCANIC_RF"] - radforc8[!,"CO2_RF"]
 
     #Add fossil fuel and land use change + other sources CO2 emissions together.
     co2_emissions8 = emiss8[!, "FossilCO2"] + emiss8[!, "OtherCO2"]
@@ -49,18 +49,18 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
     raw_conc3    = CSV.File(normpath(@__DIR__,"..","data", (rcp_scenario * "_MIDYEAR_CONCENTRATIONS.csv")), skipto=39, header = 38) |> DataFrame
 
     #Isolate data for the years model will be run.
-    radforc3 = raw_radforc3[(raw_radforc[!,"v YEARS/GAS >"].>=start_year) .& (raw_radforc[!,"v YEARS/GAS >"].<=end_year),:]
-    emiss3 = raw_emiss3[(raw_emiss[!,"v YEARS/GAS >"].>=start_year) .& (raw_emiss[!,"v YEARS/GAS >"].<=end_year),:]
-    conc3 = raw_conc3[(raw_conc[!,"v YEARS/GAS >"].>=start_year) .& (raw_conc[!,"v YEARS/GAS >"].<=end_year),:]
+    radforc3 = raw_radforc3[(raw_radforc3[!,"v YEARS/GAS >"].>=start_year) .& (raw_radforc3[!,"v YEARS/GAS >"].<=end_year),:]
+    emiss3 = raw_emiss3[(raw_emiss3[!,"v YEARS/GAS >"].>=start_year) .& (raw_emiss3[!,"v YEARS/GAS >"].<=end_year),:]
+    conc3 = raw_conc3[(raw_conc3[!,"v YEARS/GAS >"].>=start_year) .& (raw_conc3[!,"v YEARS/GAS >"].<=end_year),:]
 
     #Subtract CO2 RF from Total Anthropogenic RF to avoid double counting.
-    exogenous_rf3 = radforc3[!,"TOTAL_ANTHRO_RF"] - radforc3[!,"CO2_RF"]
+    exogenous_rf3 = radforc3[!,"TOTAL_INCLVOLCANIC_RF"] - radforc3[!,"CO2_RF"]
 
     #Add fossil fuel and land use change + other sources CO2 emissions together.
     co2_emissions3 = emiss3[!, "FossilCO2"] + emiss3[!, "OtherCO2"]
 
     #Get N2O concentrations (used in CO2 radiative forcing calculations).
-    N2O_conc3 = conc[!, "N2O"]
+    N2O_conc3 = conc3[!, "N2O"]
 
 #######################################################################################################
 # SET MODEL PARAMETER VALUES
