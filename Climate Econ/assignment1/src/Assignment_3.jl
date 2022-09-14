@@ -9,7 +9,7 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
 ############################################################################################################
 
     # Start and end year for the model
-    start_year = 2015
+    start_year = 1850
     end_year   = 2300
 
     # Set RCP Scenario (current options = "rcp85").
@@ -207,12 +207,12 @@ function run_model(CO2_emiss)
 end
 
 my_results = run_model(co2_emissions)
+my_results
+x = my_results[166:end,"years"]
+y = my_results[166:end,"CO2"]
+plot(x,y,  title = "Global CO2 above pre-industrial", label = "Our model", legend=:topleft)
 
-x = my_results[1:172,"years"]
-y = my_results[1:172,"temperature"]
-plot(x,y,  title = "Global av Temperature above pre-industrial", label = "Our model", legend=:topleft, ylab="degrees C")
-
-my_results[156,"years"]
+my_results[166,"years"]
 
 ssp = CSV.File(normpath(@__DIR__,"..","data", ("iamc_db_total.csv")), skipto=6, header = 4) |> DataFrame
 ssp_itp = copy(ssp)
@@ -220,24 +220,24 @@ ssp_itp = copy(ssp)
 itp_gdp = LinearInterpolation(ssp[:,1], ssp[:,3])
 itp_pop = LinearInterpolation(ssp[:,1], ssp[:,4])
 itp_ener = LinearInterpolation(ssp[:,1], ssp[:,5])
-itp_co2 = LinearInterpolation(ssp[3:11,1], ssp[3:11,2])
+itp_co2 = LinearInterpolation(ssp[:,1], ssp[:,2])
 
-years = [collect(2015:2300)]
-range(2015,2300)
-[collect(2015:2300)]
-itp(2006)
-filldf2 = fill(0.::Float64, 2300-2015+1)
-ssp_itp = DataFrame(years = [2015:1:2300;], pop = filldf2, gdp = filldf2, energy = filldf2, co2 = filldf2)
-itp_gdp(2200)
-
-etp_gdp = extrapolate(itp_gdp, Line())
+ssp_itp = DataFrame(years = [2015:1:2300;], pop = fill(	7375.::Float64, 2300-2015+1), gdp = fill(139.797::Float64, 2300-2015+1), energy = fill(0.002::Float64, 2300-2015+1), co2 = fill(69.236::Float64, 2300-2015+1))
 
 
-for i in 2015:2300
+
+
+for i in 2015:2100
     ssp_itp[i-2014, "pop"] = itp_pop(i)
     ssp_itp[i-2014, "gdp"] = itp_gdp(i)
     ssp_itp[i-2014, "energy"] = itp_ener(i)
     ssp_itp[i-2014, "co2"] = itp_co2(i)
 end
 
-itp = interpolate(1:7, BSpline(Linear()))
+ssp_itp
+ssp_co2 = ssp_itp[:,2].*ssp_itp[:,3].*ssp_itp[:,4].*ssp_itp[:,5]
+ssp_itp[:,2]
+
+
+plot(x,[y,y2],  title = "Global av Temperature above pre-industrial", label = ["Our model" "HadCRUT Data"], legend=:topleft, ylab="degrees C")
+plot(x,y,  title = "Global CO2 above pre-industrial", label = "Our model", legend=:topleft)
