@@ -217,5 +217,27 @@ my_results[156,"years"]
 ssp = CSV.File(normpath(@__DIR__,"..","data", ("iamc_db_total.csv")), skipto=6, header = 4) |> DataFrame
 ssp_itp = copy(ssp)
 
-itp = LinearInterpolation(ssp_itp[:,1], ssp_itp[:,3])
+itp_gdp = LinearInterpolation(ssp[:,1], ssp[:,3])
+itp_pop = LinearInterpolation(ssp[:,1], ssp[:,4])
+itp_ener = LinearInterpolation(ssp[:,1], ssp[:,5])
+itp_co2 = LinearInterpolation(ssp[3:11,1], ssp[3:11,2])
+
+years = [collect(2015:2300)]
+range(2015,2300)
+[collect(2015:2300)]
 itp(2006)
+filldf2 = fill(0.::Float64, 2300-2015+1)
+ssp_itp = DataFrame(years = [2015:1:2300;], pop = filldf2, gdp = filldf2, energy = filldf2, co2 = filldf2)
+itp_gdp(2200)
+
+etp_gdp = extrapolate(itp_gdp, Line())
+
+
+for i in 2015:2300
+    ssp_itp[i-2014, "pop"] = itp_pop(i)
+    ssp_itp[i-2014, "gdp"] = itp_gdp(i)
+    ssp_itp[i-2014, "energy"] = itp_ener(i)
+    ssp_itp[i-2014, "co2"] = itp_co2(i)
+end
+
+itp = interpolate(1:7, BSpline(Linear()))
