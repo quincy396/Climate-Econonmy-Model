@@ -291,4 +291,4 @@ q5_results = run_model(kaya5)
 y5 = q5_results[:, "temperature"]
 plot(x,[y,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Emissions SSP"], legend=:topleft, ylab="degrees C")
 
-plot(x,[y,y2,y3,y4,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP" "GDP SSP" "Energy SSP" "Emissions SSP"], legend=:topleft, ylab="degrees C")
+plot(x,[y,y2,y3,y4,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population: Continuous" "GDP: constant" "Energy: mulitply" "Emissions: piecewise"], legend=:topleft, ylab="degrees C")
