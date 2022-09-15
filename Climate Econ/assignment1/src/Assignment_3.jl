@@ -9,7 +9,7 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
 ############################################################################################################
 
     # Start and end year for the model
-    start_year = 1850
+    start_year = 2015
     end_year   = 2300
 
     # Set RCP Scenario (current options = "rcp85").
@@ -208,19 +208,20 @@ end
 
 my_results = run_model(co2_emissions)
 my_results
-x = my_results[166:end,"years"]
-y = my_results[166:end,"CO2"]
+x = my_results[:,"years"]
+y = my_results[:,"temperature"]
 plot(x,y,  title = "Global CO2 above pre-industrial", label = "Our model", legend=:topleft)
 
-my_results[166,"years"]
+
 
 ssp = CSV.File(normpath(@__DIR__,"..","data", ("iamc_db_total.csv")), skipto=6, header = 4) |> DataFrame
 ssp_itp = copy(ssp)
 
+itp_co2 = LinearInterpolation(ssp[:,1], ssp[:,2])
 itp_gdp = LinearInterpolation(ssp[:,1], ssp[:,3])
 itp_pop = LinearInterpolation(ssp[:,1], ssp[:,4])
 itp_ener = LinearInterpolation(ssp[:,1], ssp[:,5])
-itp_co2 = LinearInterpolation(ssp[:,1], ssp[:,2])
+
 
 ssp_itp = DataFrame(years = [2015:1:2300;], pop = fill(	7375.::Float64, 2300-2015+1), gdp = fill(139.797::Float64, 2300-2015+1), energy = fill(0.002::Float64, 2300-2015+1), co2 = fill(69.236::Float64, 2300-2015+1))
 
@@ -234,10 +235,60 @@ for i in 2015:2100
     ssp_itp[i-2014, "co2"] = itp_co2(i)
 end
 
+function kayaFun(ssp)
+    return ssp[:,2].*ssp[:,3].*ssp[:,4].*ssp[:,5]* 12/44/1000
+end
+
 ssp_itp
-ssp_co2 = ssp_itp[:,2].*ssp_itp[:,3].*ssp_itp[:,4].*ssp_itp[:,5]
-ssp_itp[:,2]
+kaya1 = kayaFun(ssp_itp)
+
+q1_results = run_model(kaya1)
+y1 = q1_results[:, "temperature"]
+plot(x,[y,y1],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Baseline SSP"], legend=:topleft, ylab="degrees C")
+
+###################################
+#question 2 
+
+#change population
+ssp_pop = copy(ssp_itp)
+ssp_pop[:,2] = ssp_pop[:,2] - [1:2:286*2;]
+kaya2 = kayaFun(ssp_pop)
+
+q2_results = run_model(kaya2)
+y2 = q2_results[:, "temperature"]
+plot(x,[y,y2],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP"], legend=:topleft, ylab="degrees C")
 
 
-plot(x,[y,y2],  title = "Global av Temperature above pre-industrial", label = ["Our model" "HadCRUT Data"], legend=:topleft, ylab="degrees C")
-plot(x,y,  title = "Global CO2 above pre-industrial", label = "Our model", legend=:topleft)
+#change gdp
+ssp_gdp = copy(ssp_itp)
+ssp_gdp[:,3]
+ssp_gdp[:,3] = ssp_gdp[:,3] .-5
+kaya3 = kayaFun(ssp_gdp)
+
+q3_results = run_model(kaya3)
+y3= q3_results[:, "temperature"]
+plot(x,[y,y3],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP"], legend=:topleft, ylab="degrees C")
+
+#change energy
+ssp_ener = copy(ssp_itp)
+ssp_ener[:,4]
+ssp_ener[:,4] = ssp_ener[:,4]*0.7
+kaya4 = kayaFun(ssp_ener)
+
+q4_results = run_model(kaya4)
+y4 = q4_results[:, "temperature"]
+plot(x,[y,y4],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP"], legend=:topleft, ylab="degrees C")
+
+#change emissions
+ssp_co2 = copy(ssp_itp)
+ssp_co2[:,5]
+ssp_co2[1:80,5] = ssp_co2[1:80,5] .+ 20
+ssp_co2[120:200,5] = ssp_co2[120:200,5] .- 20
+ssp_co2[200:end,5] = ssp_co2[200:end,5] .-30
+kaya5 = kayaFun(ssp_co2)
+
+q5_results = run_model(kaya5)
+y5 = q5_results[:, "temperature"]
+plot(x,[y,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP"], legend=:topleft, ylab="degrees C")
+
+plot(x,[y,y1,y2,y3,y4,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP"], legend=:topleft, ylab="degrees C")
