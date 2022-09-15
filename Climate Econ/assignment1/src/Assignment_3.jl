@@ -267,7 +267,7 @@ kaya3 = kayaFun(ssp_gdp)
 
 q3_results = run_model(kaya3)
 y3= q3_results[:, "temperature"]
-plot(x,[y,y3],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP"], legend=:topleft, ylab="degrees C")
+plot(x,[y,y3],  title = "Global av Temperature above 2015", label = ["rcp8.5" "GDP SSP"], legend=:topleft, ylab="degrees C")
 
 #change energy
 ssp_ener = copy(ssp_itp)
@@ -277,7 +277,7 @@ kaya4 = kayaFun(ssp_ener)
 
 q4_results = run_model(kaya4)
 y4 = q4_results[:, "temperature"]
-plot(x,[y,y4],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP"], legend=:topleft, ylab="degrees C")
+plot(x,[y,y4],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Energy SSP"], legend=:topleft, ylab="degrees C")
 
 #change emissions
 ssp_co2 = copy(ssp_itp)
@@ -289,6 +289,6 @@ kaya5 = kayaFun(ssp_co2)
 
 q5_results = run_model(kaya5)
 y5 = q5_results[:, "temperature"]
-plot(x,[y,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP"], legend=:topleft, ylab="degrees C")
+plot(x,[y,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Emissions SSP"], legend=:topleft, ylab="degrees C")
 
-plot(x,[y,y1,y2,y3,y4,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP"], legend=:topleft, ylab="degrees C")
+plot(x,[y,y2,y3,y4,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population SSP" "GDP SSP" "Energy SSP" "Emissions SSP"], legend=:topleft, ylab="degrees C")
