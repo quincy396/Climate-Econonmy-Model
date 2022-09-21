@@ -246,6 +246,8 @@ q1_results = run_model(kaya1)
 y1 = q1_results[:, "temperature"]
 plot(x,[y,y1],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Baseline SSP"], legend=:topleft, ylab="degrees C")
 
+plot(x,[co2_emissions,kaya1],  title = "Global CO2 concentration above 2015", label = ["rcp8.5" "Baseline SSP"], legend=:topleft, ylab="degrees C")
+
 ###################################
 #question 2 
 
@@ -292,3 +294,5 @@ y5 = q5_results[:, "temperature"]
 plot(x,[y,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Emissions SSP"], legend=:topleft, ylab="degrees C")
 
 plot(x,[y,y2,y3,y4,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Population: Continuous" "GDP: constant" "Energy: mulitply" "Emissions: piecewise"], legend=:topleft, ylab="degrees C")
+
+plot(x,[y,y5],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Emissions SSP"], legend=:topleft, ylab="degrees C")

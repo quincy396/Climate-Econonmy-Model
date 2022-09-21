@@ -227,10 +227,22 @@ q1_results = run_model(kaya1)
 y1 = q1_results[:, "temperature"]
 plot(x,[y,y1],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Baseline SSP"], legend=:topleft, ylab="degrees C")
 
+ssp
+########################################
+# Problem  
+#abatement
+ssp[!, "abatement1"]=fill(0.0,286)
+ssp[!, "abatement2"]=fill(0.0,286)
+
+ssp[16:86, "YEARS"]
+ssp[1:86, "abatement2"]=[1:-1/85:0;]
+ssp[1:16, "abatement1"]=fill(1.0,16)
+ssp[16:86, "abatement1"]=[1:-1/70:0;]
+
 
 
 
 
 ########################################
-# Problem
+# Problem 2 
 reduction = 
