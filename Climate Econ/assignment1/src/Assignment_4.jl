@@ -255,8 +255,6 @@ emiss_control_rate2 = ssp[!," Emissions control rate p2 "]
 cost_fraction2 = abate_cost_coeff .* emiss_control_rate2.^exp_control .* participation^(1-exp_control)
 cost2 = cost_fraction2 .* ssp[!, "GDP/Pop"]
 
-plot(x,[emiss_control_rate1.^exp_control,emiss_control_rate2.^exp_control],  title = "Fractional Cost of Abatement", label = ["Policy 1" "Policy 2"], legend=:topleft, ylab="Percent GDP")
-
 
 plot(x,[cost_fraction1,cost_fraction2],  title = "Fractional Cost of Abatement", label = ["Policy 1" "Policy 2"], legend=:topleft, ylab="Percent GDP")
 
