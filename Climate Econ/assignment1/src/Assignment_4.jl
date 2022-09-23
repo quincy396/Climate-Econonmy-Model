@@ -212,16 +212,16 @@ x = my_results[:,"years"]
 y = my_results[:,"temperature"]
 plot(x,y,  title = "Global CO2 above pre-industrial", label = "Our model", legend=:topleft)
 
-ssp = CSV.File(normpath(@__DIR__,"..","data", ("Kaya_Eli.csv")), skipto=15, header = 4) |> DataFrame
+ssp = CSV.File(normpath(@__DIR__,"..","data", ("Kaya_Eli.csv")), skipto=5, header = 4) |> DataFrame
 
 function kayaFun(ssp)
     return ssp[:,2].*ssp[:,3].*ssp[:,4].*ssp[:,5]#* 12/44/1000
 end
 
 
-kaya1 = kayaFun(ssp)
+kaya = kayaFun(ssp)
 
-emiss = kaya1 + emiss8[!, "OtherCO2"]
+emiss = kaya #+ emiss8[!, "OtherCO2"]
 
 q1_results = run_model(kaya1)
 y1 = q1_results[:, "temperature"]
@@ -230,7 +230,7 @@ plot(x,[y,y1],  title = "Global av Temperature above 2015", label = ["rcp8.5" "B
 ssp
 ########################################
 # Problem  
-#abatement
+#abatement 
 ssp[!, "abatement1"]=fill(0.0,286)
 ssp[!, "abatement2"]=fill(0.0,286)
 
@@ -239,10 +239,36 @@ ssp[1:86, "abatement2"]=[1:-1/85:0;]
 ssp[1:16, "abatement1"]=fill(1.0,16)
 ssp[16:86, "abatement1"]=[1:-1/70:0;]
 
+###############################
+#cost
+participation = 1
+exp_control = 2.6
+abate_cost_coeff = ssp[!," Abatement cost function coefficient "]
+emiss_control_rate = ssp[!," Emissions control rate p1 "]
+
+cost_fraction1 = abate_cost_coeff .* emiss_control_rate.^exp_control .* participation^(1-exp_control)
+cost1 = cost_fraction1 .* ssp[!, "GDP/Pop"]
 
 
+emiss_control_rate2 = ssp[!," Emissions control rate p2 "]
+
+cost_fraction2 = abate_cost_coeff .* emiss_control_rate2.^exp_control .* participation^(1-exp_control)
+cost2 = cost_fraction2 .* ssp[!, "GDP/Pop"]
+
+plot(x,[emiss_control_rate1.^exp_control,emiss_control_rate2.^exp_control],  title = "Fractional Cost of Abatement", label = ["Policy 1" "Policy 2"], legend=:topleft, ylab="Percent GDP")
 
 
-########################################
-# Problem 2 
-reduction = 
+plot(x,[cost_fraction1,cost_fraction2],  title = "Fractional Cost of Abatement", label = ["Policy 1" "Policy 2"], legend=:topleft, ylab="Percent GDP")
+
+plot(x,[cost1,cost2],  title = "Absolute Cost of Abatement", label = ["Policy 1" "Policy 2"], legend=:topleft, ylab="Billion Dollars")
+
+
+###############################
+#temperature
+emiss1 = kaya .* ssp[!, "abatement1"]
+results1 = run_model(emiss1)
+emiss2 = kaya .* ssp[!, "abatement2"]
+results2 = run_model(emiss2)
+
+plot(x,[y,y1,results1[:, "temperature"],results2[:, "temperature"]],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Baseline SSP" "Policy 1" "Policy 2"], legend=:topleft, ylab="degrees C")
+
