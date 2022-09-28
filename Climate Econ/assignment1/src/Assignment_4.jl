@@ -270,3 +270,4 @@ results2 = run_model(emiss2)
 
 plot(x,[y,y1,results1[:, "temperature"],results2[:, "temperature"]],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Baseline SSP" "Policy 1" "Policy 2"], legend=:topleft, ylab="degrees C")
 
+co2_emissions

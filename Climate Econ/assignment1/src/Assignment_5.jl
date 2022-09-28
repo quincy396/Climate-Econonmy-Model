@@ -143,12 +143,12 @@ function run_model(emiss_control_rate)
             # Set GDP and K
             output[t,"K"] = K_original[1]
             output[t,"GDP"] = Y_original[1]
-            cost_fraction = abate_cost_coeff[t] .* emiss_control_rate[t].^exp_control .* participation^(1-exp_control)
+            cost_fraction = abate_cost_coeff[t] * emiss_control_rate[t]^exp_control * participation^(1-exp_control)
             output[t,"abate_cost"] = cost_fraction*output[t,"GDP"]
             output[t,"net_GDP"] = output[t,"GDP"] - output[t,"abate_cost"]
 
             #Kaya
-            output[t,"CO2_emiss"] = output[t,"GDP"].*ssp[t,"Ener/GDP"].*ssp[t,"Emiss/Ener"]
+            output[t,"CO2_emiss"] = output[t,"GDP"].*ssp[t,"Ener/GDP"].*ssp[t,"Emiss/Ener"]*(1-emiss_control_rate[t])
 
 
             # Initialise the carbon pools to be correct for first timestep in numerical method (this is not in the paper, but taken from original FAIR source code).
@@ -188,14 +188,14 @@ function run_model(emiss_control_rate)
 
             # Set GDP and K
             output[t,"K"] = output[t-1,"K"]*0.9 + output[t-1,"net_GDP"]*0.22
-            output[t,"GDP"] = Solow_A[t]*L_original[t]^(1-Solow_a)*output[t,"K"][t]^Solow_a
+            output[t,"GDP"] = Solow_A[t]*L_original[t]^(1-Solow_a)*output[t,"K"]^Solow_a
 
-            cost_fraction = abate_cost_coeff[t] .* emiss_control_rate.^exp_control .* participation^(1-exp_control)
+            cost_fraction = abate_cost_coeff[t] * emiss_control_rate[t]^exp_control * participation^(1-exp_control)
             output[t,"abate_cost"] = cost_fraction*output[t,"GDP"]
             output[t,"net_GDP"] = output[t,"GDP"] - output[t,"abate_cost"]
 
             #Kaya
-            output[t,"CO2_emiss"] = output[t,"GDP"].*ssp[t,"Ener/GDP"].*ssp[t,"Emiss/Ener"]
+            output[t,"CO2_emiss"] = output[t,"GDP"].*ssp[t,"Ener/GDP"].*ssp[t,"Emiss/Ener"]*(1-emiss_control_rate[t])
 
 
 
@@ -218,7 +218,7 @@ function run_model(emiss_control_rate)
 
             #Calculate updated carbon cycle time constants and CO2 concentrations in 4 carbon pools.
             for i in 1:4
-                output[t, "R"*string(i)] = output[t-1, "R"*string(i)] * exp((-1.0/(tau[i]* output[t,"alpha"]))) + 0.5 * a[i] * (CO2_emiss[t] + CO2_emiss[t-1]) / ppm2gtc
+                output[t, "R"*string(i)] = output[t-1, "R"*string(i)] * exp((-1.0/(tau[i]* output[t,"alpha"]))) + 0.5 * a[i] * (output[t,"CO2_emiss"] + output[t-1,"CO2_emiss"]) / ppm2gtc
             end
 
             # Calculate the change in CO2 concentrations across all pools and the current atmospheric concentration.
@@ -264,51 +264,36 @@ function run_model(emiss_control_rate)
     return(output)
 end
 
-ssp[!, "abatement1"]
-my_results = run_model(ssp[!, "abatement1"])
+
+
+my_results = run_model(fill(0.0,286))
 my_results
 x = my_results[:,"years"]
 y = my_results[:,"temperature"]
-plot(x,y,  title = "Global CO2 above pre-industrial", label = "Our model", legend=:topleft)
+g = my_results[:,"net_GDP"]
+plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", legend=:topleft, ylab="degrees C")
 
 
-
-kaya = kayaFun(ssp)
-
-emiss = kaya #+ emiss8[!, "OtherCO2"]
-
-q1_results = run_model(emiss)
-y1 = q1_results[:, "temperature"]
-plot(x,[y,y1],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Baseline SSP"], legend=:topleft, ylab="degrees C")
-
-ssp
 ########################################
 # Problem  
 #abatement 
-ssp[!, "abatement1"]=fill(0.0,286)
-ssp[!, "abatement2"]=fill(0.0,286)
+abatement=fill(0.0,286)
+abatement[6] = 0.3
+abatement
 
-ssp[16:86, "YEARS"]
-ssp[1:86, "abatement2"]=[1:-1/85:0;]
-ssp[1:16, "abatement1"]=fill(1.0,16)
-ssp[16:86, "abatement1"]=[1:-1/70:0;]
+q1_results = run_model(abatement)
+y1 = q1_results[:, "temperature"]
+g1 = q1_results[:, "net_GDP"]
 
+plot(x,[y,y1],  title = "Global av Temperature above 2015", label = ["Baseline" "2020 abatement"], legend=:topleft, ylab="degrees C")
 
+plot(x[6:end],(y-y1)[6:end],  title = "Difference in Global av Temperature", label = "Difference",ylab="degrees C")
 
+plot(x[6:end],(g-g1)[6:end],  title = "Difference in Cost of Abatement", label = "Difference",ylab="Billion Dollars")
+plot(x,(g-g1),  title = "Difference in Cost of Abatement", label = "Difference",ylab="Billion Dollars")
 
-plot(x,[cost_fraction1,cost_fraction2],  title = "Fractional Cost of Abatement", label = ["Policy 1" "Policy 2"], legend=:topleft, ylab="Percent GDP")
-
-plot(x,[cost1,cost2],  title = "Absolute Cost of Abatement", label = ["Policy 1" "Policy 2"], legend=:topleft, ylab="Billion Dollars")
-
-
-###############################
-#temperature
-emiss1 = kaya .* ssp[!, "abatement1"]
-results1 = run_model(emiss1)
-emiss2 = kaya .* ssp[!, "abatement2"]
-results2 = run_model(emiss2)
-
-plot(x,[y,y1,results1[:, "temperature"],results2[:, "temperature"]],  title = "Global av Temperature above 2015", label = ["rcp8.5" "Baseline SSP" "Policy 1" "Policy 2"], legend=:topleft, ylab="degrees C")
-
-
-
+difference = g-g1
+difference[1]
+difference[1] <1
+findall(difference .<1)
+x[48]
