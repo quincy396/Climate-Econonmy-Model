@@ -63,6 +63,7 @@ K_original = ssp[!,"Capital "]
 L_original = ssp[!, "Population"]
 Solow_a = 0.3
 Solow_A = Y_original./(L_original.^(1-Solow_a).*K_original.^Solow_a)
+K_original[1]
 
 #######################################################################################################
 # SET MODEL PARAMETER VALUES
@@ -105,7 +106,7 @@ Solow_A = Y_original./(L_original.^(1-Solow_a).*K_original.^Solow_a)
 
 # run_model = function(CO2_emiss){
 
-function run_model(emiss_control_rate)
+function run_model(emiss_control_rate, damage_model)
 
 
 
@@ -125,7 +126,7 @@ function run_model(emiss_control_rate)
     # gdp and abatement cost results
     GDP = filldf, abate_cost = filldf, net_GDP = filldf, K = filldf,
     #kaya
-    CO2_emiss = filldf)
+    CO2_emiss = filldf, damages = filldf)
 
 
     #Loop through the model
@@ -141,18 +142,14 @@ function run_model(emiss_control_rate)
             #----------------------------#
 
             # Set GDP and K
-            output[t,"K"] = K_original[1]
+            output[t,"K"] = 223000
             output[t,"GDP"] = Y_original[1]
-
-            sigma = ssp[t,"Ener/GDP"]*ssp[t,"Emiss/Ener"]* (44/12)
-            coefficient = ssp[t," Backstop price  "]*sigma/2.6
-            cost_fraction = coefficient * emiss_control_rate[t]^exp_control * participation^(1-exp_control)
+            cost_fraction = abate_cost_coeff[t] * emiss_control_rate[t]^exp_control * participation^(1-exp_control)
             output[t,"abate_cost"] = cost_fraction*output[t,"GDP"]
             output[t,"net_GDP"] = output[t,"GDP"] - output[t,"abate_cost"]
 
             #Kaya
             output[t,"CO2_emiss"] = output[t,"GDP"].*ssp[t,"Ener/GDP"].*ssp[t,"Emiss/Ener"]*(1-emiss_control_rate[t])
-
 
 
             # Initialise the carbon pools to be correct for first timestep in numerical method (this is not in the paper, but taken from original FAIR source code).
@@ -192,11 +189,10 @@ function run_model(emiss_control_rate)
 
             # Set GDP and K
             output[t,"K"] = output[t-1,"K"]*0.9 + output[t-1,"net_GDP"]*0.22
+            #print(output[t,"K"])
             output[t,"GDP"] = Solow_A[t]*L_original[t]^(1-Solow_a)*output[t,"K"]^Solow_a
 
-            sigma = ssp[t,"Ener/GDP"]*ssp[t,"Emiss/Ener"]* (44/12)
-            coefficient = ssp[t," Backstop price  "]*sigma/2.6
-            cost_fraction = coefficient * emiss_control_rate[t]^exp_control * participation^(1-exp_control)
+            cost_fraction = abate_cost_coeff[t] * emiss_control_rate[t]^exp_control * participation^(1-exp_control)
             output[t,"abate_cost"] = cost_fraction*output[t,"GDP"]
             output[t,"net_GDP"] = output[t,"GDP"] - output[t,"abate_cost"]
 
@@ -264,8 +260,26 @@ function run_model(emiss_control_rate)
             output[t,"temperature"] = output[t,"temp_j1"] + output[t,"temp_j2"]
             #println(output[t,"temperature"])
 
-            
+
+                # Damage to GDP function   
+            #DICE
+            if damage_model == 0
+                damage_coefficient = 0.00236
+                real_temp = output[t,"temperature"]+0.85
+                output[t,"damages"] = damage_coefficient*real_temp^2
+                output[t,"net_GDP"] = output[t,"net_GDP"] - output[t,"damages"]*output[t,"GDP"]
             end
+
+            #reading
+            if damage_model == 1
+                real_temp = output[t,"temperature"]+0.443
+                output[t,"damages"] = 0.283*real_temp + 0.146*real_temp^2
+                output[t,"net_GDP"] = output[t,"net_GDP"] - output[t,"damages"]*output[t,"GDP"]
+            end
+        
+            end
+
+            
         end
 
     return(output)
@@ -273,39 +287,56 @@ end
 
 
 
-my_results = run_model(fill(0.0,286))
+my_results = run_model(fill(0.0,286),0)
 my_results
 x = my_results[:,"years"]
 y = my_results[:,"temperature"]
 g = my_results[:,"net_GDP"]
 plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", legend=:topleft, ylab="degrees C")
 
-
-########################################
-# Problem  
-#abatement 
-abatement=fill(0.0,286)
-abatement[6] = 0.3
-abatement
-
-q1_results = run_model(abatement)
-y1 = q1_results[:, "temperature"]
-g1 = q1_results[:, "net_GDP"]
+my_results[:,"damages"]
 
 plot(x,[y,y1],  title = "Global av Temperature above 2015", label = ["Baseline" "2020 abatement"], legend=:topleft, ylab="degrees C")
 
-plot(x[6:end],(y-y1)[6:end],  title = "Difference in Global av Temperature", label = "Difference",ylab="degrees C")
 
-plot(x[7:end],(g-g1)[7:end],  title = "Difference in Cost of Abatement", label = "Difference",ylab="Billion Dollars")
-plot(x,(g-g1),  title = "Difference in Cost of Abatement", label = "Difference",ylab="Billion Dollars")
+#does it work
+test = run_model(fill(0.0,286), -1)
+gt = test[:,"net_GDP"]
+plot(x,[g,gt],  title = "Global av Temperature above 2015", label = ["Baseline" "Policy1"], legend=:topleft, ylab="degrees C")
 
-difference = g-g1
-g1[6]
-g[6]
-difference[1]
-difference[1] <1
-findall(difference .<1)
-x[48]
 
-ssp[!," Backstop price  "]
+########################################
+# Policies
 
+policy1 = fill(0.1,286)
+
+q1_0 = run_model(policy1, 0)
+#q1_1 = run_model(policy1, 1)
+g1_0 = q1_0[:, "net_GDP"]
+g1_1 = q1_1[:, "net_GDP"]
+
+plot(x,[g./ssp[!,"Population"], g1_0./ssp[!,"Population"]],  title = "Global av Temperature above 2015", label = ["Baseline" "Policy1"], legend=:topleft, ylab="degrees C")
+
+plot(x,[g./ssp[!,"Population"], g1./ssp[!,"Population"]],  title = "Global av Temperature above 2015", label = ["Baseline" "Policy1"], legend=:topleft, ylab="degrees C")
+
+plot(x,(g-g1_0)./ssp[!,"Population"],  title = "Difference in net GDP", label = "Difference", legend=:bottomleft,ylab="Billion Dollars")
+
+
+policy2 = abatement=fill(0.2,286)
+policy3 = abatement=fill(0.3,286)
+
+
+policy4 = abatement=fill(0.4,286)
+
+q4_0 = run_model(policy4, 0)
+q4_1 = run_model(policy4, 1)
+g4_0 = q4_0[:, "net_GDP"]
+g4_1 = q4_1[:, "net_GDP"]
+
+plot(x,[y, q4_0[:, "temperature"]],  title = "Global av Temperature above 2015", label = ["Baseline" "Policy1"], legend=:topleft, ylab="degrees C")
+
+plot(x,[g, g4_0],  title = "Global av Temperature above 2015", label = ["Baseline" "Policy1"], legend=:topleft, ylab="degrees C")
+
+plot(x,[g./ssp[!,"Population"], g1./ssp[!,"Population"]],  title = "Global av Temperature above 2015", label = ["Baseline" "Policy1"], legend=:topleft, ylab="degrees C")
+
+plot(x,(g-g4_0)./ssp[!,"Population"],  title = "Difference in net GDP", label = "Difference", legend=:bottomleft,ylab="Billion Dollars")
