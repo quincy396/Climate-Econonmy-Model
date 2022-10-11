@@ -180,6 +180,12 @@ function run_model(emiss_control_rate, elasticity)
             # Set initial surface temperature anomaly to 0.0.
             output[t,"temperature"] = 0.0
 
+            damage_coefficient = 0.00236
+            real_temp = output[t,"temperature"]+0.85
+            income_elasticity = (output[t,"GDP"]/output[1,"GDP"])^elasticity
+            output[t,"damages"] = damage_coefficient*real_temp^2 * income_elasticity
+            #println(output[t,"damages"])
+            output[t,"net_GDP"] = output[t,"net_GDP"] - output[t,"damages"]*output[t,"GDP"]
            
 
         else
@@ -268,13 +274,12 @@ function run_model(emiss_control_rate, elasticity)
             damage_coefficient = 0.00236
             real_temp = output[t,"temperature"]+0.85
             income_elasticity = (output[t,"GDP"]/output[1,"GDP"])^elasticity
-            println(income_elasticity)
             output[t,"damages"] = damage_coefficient*real_temp^2 * income_elasticity
             #println(output[t,"damages"])
             output[t,"net_GDP"] = output[t,"net_GDP"] - output[t,"damages"]*output[t,"GDP"]
         
             end
-
+            
             
         end
 
@@ -290,16 +295,13 @@ g = my_results[:,"net_GDP"]
 d = my_results[:,"damages"].*my_results[:,"GDP"]
 plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", legend=:topleft, ylab="degrees C")
 
-my_results[:,"damages"]
-
-plot(x,[y,y1],  title = "Global av Temperature above 2015", label = ["Baseline" "2020 abatement"], legend=:topleft, ylab="degrees C")
 
 
 #elasticity analysis
 q0 = run_model(fill(0.0,286), 0)
-g0 = q0[:,"net_GDP"]
+d0 = q0[:,"GDP"] - q0[:,"net_GDP"]
 q1 = run_model(fill(0.0,286), 0.25)
-g1 = q1[:,"net_GDP"]
+d1 = q1[:,"GDP"] - q1[:,"net_GDP"]
 q2 = run_model(fill(0.0,286), -0.25)
-g2 = q2[:,"net_GDP"]
-plot(x,[g,g0,g1,g2],  title = "GDP", label = ["Baseline" "0 elasticity"], legend=:topleft, ylab="Dollars")
+d2 = q2[:,"GDP"] - q2[:,"net_GDP"]
+plot(x,[d,d0,d1,d2],  title = "Damage to GDP from income elasticity", label = ["Baseline" "0 elasticity" "0.25 elasticity" "-0.25 elasticity"], legend=:topleft, ylab="Billion Dollars")
