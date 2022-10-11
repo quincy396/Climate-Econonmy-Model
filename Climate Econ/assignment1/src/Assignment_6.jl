@@ -377,3 +377,5 @@ plot(x,[q1_1[!,"abate_cost"]./q1_1[!,"GDP"].*100, q2_1[!,"abate_cost"]./q1_1[!,"
 #GDP
 plot(x,[(g1_0-g)./ssp[!,"Population"], (g2_0-g)./ssp[!,"Population"], (g3_0-g)./ssp[!,"Population"], (g4_0-g)./ssp[!,"Population"]],  title = "Difference in Per Capita Consumption \n between Baseline and Policy DICE model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="Billion Dollar / Million people")
 plot(x,[(g1_1-g)./ssp[!,"Population"], (g2_1-g)./ssp[!,"Population"], (g3_1-g)./ssp[!,"Population"], (g4_1-g)./ssp[!,"Population"]],  title = "Difference in Per Capita Consumption \n between Baseline and Policy Reading model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="Billion Dollar / Million people")
+
+plot(x,[(g1_0-g)./g, (g2_0-g)./g, (g3_0-g)./g, (g4_0-g)./g],  title = "Difference in Per Capita Consumption \n between Baseline and Policy DICE model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="Percent")
