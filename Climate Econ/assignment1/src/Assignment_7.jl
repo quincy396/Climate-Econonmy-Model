@@ -298,7 +298,7 @@ x = my_results[:,"years"]
 y = my_results[:,"temperature"]
 g = my_results[:,"net_GDP"]
 d = my_results[:,"damages"].*my_results[:,"GDP"]
-plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", legend=:topleft, ylab="degrees C")
+#plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", legend=:topleft, ylab="degrees C")
 y
 
 

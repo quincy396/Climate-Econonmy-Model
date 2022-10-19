@@ -60,7 +60,7 @@ participation = 1
 exp_control = 2.6
 
 #Solow
-Y_original = ssp[!, "GDP.Pop"].*ssp[!, "Population"]
+Y_original = ssp[!, "GDP/Pop"].*ssp[!, "Population"]
 
 L_original = ssp[!, "Population"]
 Solow_a = 0.3
