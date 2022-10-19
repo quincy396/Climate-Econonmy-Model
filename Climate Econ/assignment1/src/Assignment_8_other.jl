@@ -45,23 +45,27 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
 #######################################################################################################
 # SET KAYA AND SOLOW MODEL 
 ########################################################################################################
-raw_ssp = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "KayaBackStopTFP.csv"), skipto=2, header = 1))
-raw_backstop = DataFrame(YEARS = raw_ssp[!,"YEARS"], Backstop_Price = raw_ssp[!,"Backstop"])
-ssp  = raw_ssp[(raw_ssp[!,"YEARS"].>= start_year) .& (raw_ssp[!,"YEARS"] .<= end_year), :]
-dice_backstop = raw_backstop[raw_backstop[!,"YEARS"] .>= start_year .&& raw_backstop[!,"YEARS"] .<= end_year, "Backstop_Price"]
+ssp = CSV.File(normpath(@__DIR__,"..","data", ("Kaya_Eli4.csv")), skipto=5, header = 4) |> DataFrame
+abate_cost_coeff = ssp[!," Abatement cost function coefficient "]
+K_original = ssp[!,"Capital "]
+ssp = CSV.File(normpath(@__DIR__,"..","data", ("KayaBackStopTFP.csv")), skipto=2, header = 1) |> DataFrame
 
+#Kaya
+function kayaFun(ssp)
+    return ssp[:,2].*ssp[:,3].*ssp[:,4].*ssp[:,5]#* 12/44/1000
+end
 
 #DICE abatement cost
 participation = 1
 exp_control = 2.6
 
-
 #Solow
-Y_original = ssp[!, "GDP/Pop"].*ssp[!, "Population"]
+Y_original = ssp[!, "GDP.Pop"].*ssp[!, "Population"]
+
 L_original = ssp[!, "Population"]
 Solow_a = 0.3
-Solow_A = ssp[!, "Solowtfp"]
-
+Solow_A = Y_original./(L_original.^(1-Solow_a).*K_original.^Solow_a)
+K_original[1]
 
 #######################################################################################################
 # SET MODEL PARAMETER VALUES
@@ -142,11 +146,7 @@ function run_model(emiss_control_rate, elasticity)
             # Set GDP and K
             output[t,"K"] = 223000
             output[t,"GDP"] = Y_original[1]
-
-            sigma = ssp[t, "Emiss/Ener"] * ssp[t, "Ener/GDP"]  * (44/12) #* 1000
-            abate_cost_coeff = ssp[t, "Backstop"] * sigma / 2.6
-
-            cost_fraction = abate_cost_coeff * emiss_control_rate[t]^exp_control * participation^(1-exp_control)
+            cost_fraction = abate_cost_coeff[t] * emiss_control_rate[t]^exp_control * participation^(1-exp_control)
             output[t,"abate_cost"] = cost_fraction*output[t,"GDP"]
             output[t,"net_GDP"] = output[t,"GDP"] - output[t,"abate_cost"]
 
@@ -200,10 +200,7 @@ function run_model(emiss_control_rate, elasticity)
             #print(output[t,"K"])
             output[t,"GDP"] = Solow_A[t]*L_original[t]^(1-Solow_a)*output[t,"K"]^Solow_a
 
-            sigma = ssp[t, "Emiss/Ener"] * ssp[t, "Ener/GDP"]  * (44/12) #* 1000
-            abate_cost_coeff = ssp[t, "Backstop"] * sigma / 2.6
-
-            cost_fraction = abate_cost_coeff * emiss_control_rate[t]^exp_control * participation^(1-exp_control)
+            cost_fraction = abate_cost_coeff[t] * emiss_control_rate[t]^exp_control * participation^(1-exp_control)
             output[t,"abate_cost"] = cost_fraction*output[t,"GDP"]
             output[t,"net_GDP"] = output[t,"GDP"] - output[t,"abate_cost"]
 
@@ -299,16 +296,58 @@ y = my_results[:,"temperature"]
 g = my_results[:,"net_GDP"]
 d = my_results[:,"damages"].*my_results[:,"GDP"]
 plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", legend=:topleft, ylab="degrees C")
-y
+
 
 
 #elasticity analysis
 q0 = run_model(fill(0.0,286), 0)
-d0 = q0[:,"GDP"] .* q0[:,"damages"]
+d0 = q0[:,"GDP"] - q0[:,"net_GDP"]
 q1 = run_model(fill(0.0,286), 0.25)
-d1 = q1[:,"GDP"] .* q1[:,"damages"]
+d1 = q1[:,"GDP"] - q1[:,"net_GDP"]
 q2 = run_model(fill(0.0,286), -0.25)
 d2 = q2[:,"GDP"] - q2[:,"net_GDP"]
+plot(x,[d,d0,d1,d2],  title = "Damage to GDP from income elasticity", label = ["Baseline" "0 elasticity" "0.25 elasticity" "-0.25 elasticity"], legend=:topleft, ylab="Billion Dollars")
 
-plot(x,[d0,d1,d2],  title = "Damage to GDP from income elasticity", label = ["0 elasticity" "0.25 elasticity" "-0.25 elasticity"], legend=:topleft, ylab="Billion Dollars")
 
+#Policies
+policy1 = fill(0.1,286)
+q1_0 = run_model(policy1, 0)
+g1 = q1_0[:, "net_GDP"]
+benefit1 = g1 .- g
+
+policy2 = abatement=fill(0.2,286)
+q2_0 = run_model(policy2, 0)
+g2 = q2_0[:, "net_GDP"]
+benefit2 = g2 .- g
+
+policy3 = abatement=fill(0.3,286)
+q3_0 = run_model(policy3, 0)
+g3_0 = q3_0[:, "net_GDP"]
+benefit3 = g3_0 .- g
+
+policy4 = abatement=fill(0.4,286)
+q4_0 = run_model(policy4, 0)
+g4_0 = q4_0[:, "net_GDP"]
+benefit4 = g4_0 .- g
+
+filldf = fill(0.::Float64, 4)
+table = DataFrame(Policy = ["10%", "20%","30%","40%"], two_percent = filldf, three_percent = filldf, five_percent = filldf)
+
+table[2,2]
+c = [0.02,0.03,0.05]
+b = [benefit1, benefit2, benefit3, benefit4]
+
+
+for i in 1:3
+    for j in 1:4
+        benefits = b[j]
+        discounted = []
+        for k in 1:length(b[1])
+            discounted = append!(discounted,benefits[k]/((1+c[i])^(k-1)))
+        end
+        table[j,i+1] = sum(discounted)
+    end
+end
+
+
+table

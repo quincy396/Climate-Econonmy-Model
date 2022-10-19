@@ -277,7 +277,7 @@ function run_model(emiss_control_rate, elasticity)
             #DICE
 
             damage_coefficient = 0.00236
-            real_temp = output[t,"temperature"]+0.85
+            real_temp = output[t,"temperature"]
             income_elasticity = (output[t,"GDP"]/output[1,"GDP"])^elasticity
             output[t,"damages"] = damage_coefficient*real_temp^2 * income_elasticity
             #println(output[t,"damages"])
@@ -299,16 +299,48 @@ y = my_results[:,"temperature"]
 g = my_results[:,"net_GDP"]
 d = my_results[:,"damages"].*my_results[:,"GDP"]
 plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", legend=:topleft, ylab="degrees C")
-y
 
 
-#elasticity analysis
-q0 = run_model(fill(0.0,286), 0)
-d0 = q0[:,"GDP"] .* q0[:,"damages"]
-q1 = run_model(fill(0.0,286), 0.25)
-d1 = q1[:,"GDP"] .* q1[:,"damages"]
-q2 = run_model(fill(0.0,286), -0.25)
-d2 = q2[:,"GDP"] - q2[:,"net_GDP"]
 
-plot(x,[d0,d1,d2],  title = "Damage to GDP from income elasticity", label = ["0 elasticity" "0.25 elasticity" "-0.25 elasticity"], legend=:topleft, ylab="Billion Dollars")
+#Policies
+policy1 = fill(0.1,286)
+q1_0 = run_model(policy1, 0)
+g1 = q1_0[:, "net_GDP"]
+benefit1 = g1 .- g
 
+policy2 = abatement=fill(0.2,286)
+q2_0 = run_model(policy2, 0)
+g2 = q2_0[:, "net_GDP"]
+benefit2 = g2 .- g
+
+policy3 = abatement=fill(0.3,286)
+q3_0 = run_model(policy3, 0)
+g3_0 = q3_0[:, "net_GDP"]
+benefit3 = g3_0 .- g
+
+policy4 = abatement=fill(0.4,286)
+q4_0 = run_model(policy4, 0)
+g4_0 = q4_0[:, "net_GDP"]
+benefit4 = g4_0 .- g
+
+filldf = fill(0.::Float64, 4)
+table = DataFrame(Policy = ["10%", "20%","30%","40%"], two_percent = filldf, three_percent = filldf, five_percent = filldf)
+
+table[2,2]
+c = [0.02,0.03,0.05]
+b = [benefit1, benefit2, benefit3, benefit4]
+
+
+for i in 1:3
+    for j in 1:4
+        benefits = b[j]
+        discounted = []
+        for k in 1:length(b[1])
+            discounted = append!(discounted,benefits[k]/((1+c[i])^(k-1)))
+        end
+        table[j,i+1] = sum(discounted)
+    end
+end
+
+
+table
