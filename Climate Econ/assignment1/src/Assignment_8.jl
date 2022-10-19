@@ -344,3 +344,45 @@ end
 
 
 table
+
+
+
+
+
+policy1 = fill(0.1,286)
+
+q1_0 = run_model(policy1, 0)
+
+g1_0 = q1_0[:, "net_GDP"]
+g1_1 = q1_1[:, "net_GDP"]
+
+policy2 = abatement=fill(0.2,286)
+q2_0 = run_model(policy2, 0)
+
+g2_0 = q2_0[:, "net_GDP"]
+g2_1 = q2_1[:, "net_GDP"]
+policy3 = abatement=fill(0.3,286)
+q3_0 = run_model(policy3, 0)
+
+g3_0 = q3_0[:, "net_GDP"]
+g3_1 = q3_1[:, "net_GDP"]
+
+policy4 = abatement=fill(0.4,286)
+q4_0 = run_model(policy4, 0)
+g4_0 = q4_0[:, "net_GDP"]
+g4_1 = q4_1[:, "net_GDP"]
+
+##########
+# damages as percent of gdp
+plot(x,[q1_0[!,"damages"].*100, q2_0[!,"damages"].*100,q3_0[!,"damages"].*100,q4_0[!,"damages"].*100,],  title = "Damages as percent GDP DICE model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="percent GDP")
+plot(x,[q1_1[!,"damages"], q2_1[!,"damages"],q3_1[!,"damages"],q4_1[!,"damages"],],  title = "Damages as percent GDP Reading model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="percent GDP")
+
+#abatement costs
+plot(x,[q1_0[!,"abate_cost"]./q1_0[!,"GDP"].*100, q2_0[!,"abate_cost"]./q1_0[!,"GDP"].*100, q3_0[!,"abate_cost"]./q1_0[!,"GDP"].*100, q4_0[!,"abate_cost"]./q1_0[!,"GDP"].*100],  title = "Abatement cost as percent GDP DICE model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="percent GDP")
+plot(x,[q1_1[!,"abate_cost"]./q1_1[!,"GDP"].*100, q2_1[!,"abate_cost"]./q1_1[!,"GDP"].*100, q3_1[!,"abate_cost"]./q1_1[!,"GDP"].*100, q4_1[!,"abate_cost"]./q1_0[!,"GDP"].*100],  title = "Abatement cost as percent GDP Reading model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="percent GDP")
+
+#GDP
+plot(x,[(g1_0-g)./ssp[!,"Population"], (g2_0-g)./ssp[!,"Population"], (g3_0-g)./ssp[!,"Population"], (g4_0-g)./ssp[!,"Population"]],  title = "Difference in Per Capita Consumption \n between Baseline and Policy DICE model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="Billion Dollar / Million people")
+plot(x,[(g1_1-g)./ssp[!,"Population"], (g2_1-g)./ssp[!,"Population"], (g3_1-g)./ssp[!,"Population"], (g4_1-g)./ssp[!,"Population"]],  title = "Difference in Per Capita Consumption \n between Baseline and Policy Reading model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="Billion Dollar / Million people")
+
+plot(x,[(g1_0-g)./g, (g2_0-g)./g, (g3_0-g)./g, (g4_0-g)./g],  title = "Difference in Per Capita Consumption \n between Baseline and Policy DICE model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="Percent")
