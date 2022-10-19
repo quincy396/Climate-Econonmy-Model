@@ -308,20 +308,20 @@ q1_0 = run_model(policy1, 0)
 g1 = q1_0[:, "net_GDP"]
 benefit1 = g1 .- g
 
-policy2 = abatement=fill(0.2,286)
+policy2 = fill(0.2,286)
 q2_0 = run_model(policy2, 0)
 g2 = q2_0[:, "net_GDP"]
-benefit2 = g2 .- g
+benefit2 = g2 .- g0
 
-policy3 = abatement=fill(0.3,286)
+policy3 = fill(0.3,286)
 q3_0 = run_model(policy3, 0)
 g3_0 = q3_0[:, "net_GDP"]
-benefit3 = g3_0 .- g
+benefit3 = g3_0 .- g0
 
-policy4 = abatement=fill(0.4,286)
+policy4 = fill(0.4,286)
 q4_0 = run_model(policy4, 0)
 g4_0 = q4_0[:, "net_GDP"]
-benefit4 = g4_0 .- g
+benefit4 = g4_0 .- g0
 
 filldf = fill(0.::Float64, 4)
 table = DataFrame(Policy = ["10%", "20%","30%","40%"], two_percent = filldf, three_percent = filldf, five_percent = filldf)
@@ -347,13 +347,13 @@ table
 
 
 
-
+policy0 = fill(0.0,286)
+q0_0 = run_model(policy0, 0)
+g0 = q0_0[:, "net_GDP"]
 
 policy1 = fill(0.1,286)
-
 q1_0 = run_model(policy1, 0)
 g1_0 = q1_0[:, "net_GDP"]
-
 
 policy2 = abatement=fill(0.2,286)
 q2_0 = run_model(policy2, 0)
@@ -369,8 +369,9 @@ g4_0 = q4_0[:, "net_GDP"]
 
 ##########
 # damages as percent of gdp
+plot(x,[g0,(g1_0), (g2_0), (g3_0), (g4_0)],  title = "Difference in Per Capita Consumption \n between Baseline and Policy DICE model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="Percent")
 
-plot(x,[(g1_0-g)./g, (g2_0-g)./g, (g3_0-g)./g, (g4_0-g)./g],  title = "Difference in Per Capita Consumption \n between Baseline and Policy DICE model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="Percent")
+plot(x,[(g1_0-g0)./g0, (g2_0-g0)./g0, (g3_0-g0)./g0, (g4_0-g0)./g0],  title = "Difference in Per Capita Consumption \n between Baseline and Policy DICE model", label = [ "Policy1" "Policy2" "Policy3" "Policy4"], legend=:topleft, ylab="Percent")
 
 
 #elasticity analysis
