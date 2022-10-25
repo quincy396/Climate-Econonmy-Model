@@ -9,7 +9,7 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
 ############################################################################################################
 
     # Start and end year for the model
-    start_year = 2015
+    start_year = 2020
     end_year   = 2300
 
     # Set RCP Scenario (current options = "rcp85").
@@ -64,7 +64,7 @@ Solow_A = ssp[!, "Solowtfp"]
 
 
 
-Init = DataFrame(CSV.File(normpath(@__DIR__,"..","data", ("Initial_2015.csv")), footerskip =1, header = 1))
+Init = DataFrame(CSV.File(normpath(@__DIR__,"..","data", ("Initial_2020.csv")), skipto =2, header = 1))
 
 
 #######################################################################################################
@@ -155,7 +155,7 @@ function run_model(emiss_control_rate, elasticity)
             output[t,"net_GDP"] = output[t,"GDP"] - output[t,"abate_cost"]
 
             #Kaya
-            output[t,"CO2_emiss"] = output[t,"GDP"].*ssp[t,"Ener/GDP"].*ssp[t,"Emiss/Ener"]*(1-emiss_control_rate[t])
+            output[t,"CO2_emiss"] = output[t,"GDP"].*ssp[t,"Ener/GDP"].*ssp[t,"Emiss/Ener"]*(1-emiss_control_rate[t])+1
 
 
             # Initialise the carbon pools to be correct for first timestep in numerical method (this is not in the paper, but taken from original FAIR source code).
@@ -267,6 +267,10 @@ function run_model(emiss_control_rate, elasticity)
 #LESS USEFUL HINT: the equation is in the FAIR paper.
             output[t,"temperature"] = output[t,"temp_j1"] + output[t,"temp_j2"]
             #println(output[t,"temperature"])
+
+
+
+            
         
             end
             
@@ -276,9 +280,9 @@ function run_model(emiss_control_rate, elasticity)
             damage_coefficient = 0.00236
             real_temp = output[t,"temperature"]
             income_elasticity = (output[t,"GDP"]/output[1,"GDP"])^elasticity
-            output[t,"damages"] = damage_coefficient*real_temp^2 * income_elasticity
+            output[t,"damages"] = damage_coefficient*real_temp^2 * income_elasticity*output[t,"GDP"]
             #println(output[t,"damages"])
-            output[t,"net_GDP"] = output[t,"net_GDP"] - output[t,"damages"]*output[t,"GDP"]
+            output[t,"net_GDP"] = output[t,"net_GDP"] - output[t,"damages"]
             output[t,"investment"] = output[t,"net_GDP"]*0.22
             output[t,"consumption"] = output[t,"net_GDP"] - output[t,"investment"]
 
@@ -289,13 +293,42 @@ end
 
 
 
-my_results = run_model(fill(0.0,286),0)
+my_results = run_model(fill(0.0,n_steps),0)
 x = my_results[:,"years"]
 y = my_results[:,"temperature"]
 g = my_results[:,"net_GDP"]
 g = my_results[:,"consumption"]
-d = my_results[:,"damages"].*my_results[:,"GDP"]
+d = my_results[:,"damages"]
 plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", legend=:topleft, ylab="degrees C")
+
+
+
+########
+# Social Cost of Carbon
+
+q1 = run_model(fill(0.0,n_steps),0)
+q1_d = q1[:,"damages"]
+d_diff = q1_d-d
+
+c = [0.025,0.03,0.05]
+costs = []
+
+for i in 1:3
+    discounted = []
+    for k in 1:length(d_diff)
+        discounted = append!(discounted,d_diff[k]/((1+c[i])^(k-1)))
+    end
+    costs = append!(costs, sum(discounted))
+end
+costs
+co2_costs = costs.*(44/12)
+
+
+
+
+
+
+
 
 
 
@@ -308,18 +341,17 @@ benefit1 = g1 .- g
 policy2 = fill(0.2,286)
 q2_0 = run_model(policy2, 0)
 g2 = q2_0[:, "consumption"]
-benefit2 = g2 .- g
+benefit2 = g2 .- g0
 
 policy3 = fill(0.3,286)
 q3_0 = run_model(policy3, 0)
 g3_0 = q3_0[:, "consumption"]
-benefit3 = g3_0 .- g
+benefit3 = g3_0 .- g0
 
 policy4 = fill(0.4,286)
 q4_0 = run_model(policy4, 0)
 g4_0 = q4_0[:, "consumption"]
-benefit4 = g4_0 .- g
-sum(benefit4)
+benefit4 = g4_0 .- g0
 
 filldf = fill(0.::Float64, 4)
 table = DataFrame(Policy = ["10%", "20%","30%","40%"], two_percent = filldf, three_percent = filldf, five_percent = filldf)
@@ -342,12 +374,6 @@ end
 
 
 table
-
-
-
-
-
-
 
 
 
