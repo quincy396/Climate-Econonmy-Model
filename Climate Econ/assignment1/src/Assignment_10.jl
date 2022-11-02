@@ -265,13 +265,26 @@ end
 ############
 #Co2 emissions
 #savings rate
-savings_rate = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "savings_rate.csv"), skipto=2, header = 1))
-gdp = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "gdp.csv"), skipto=2, header = 1))
-population = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "population.csv"), skipto=2, header = 1))
+raw_rice_sr = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "savings_rate.csv"), skipto=2, header = 1))
+raw_rice_gdp = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "gdp.csv"), skipto=2, header = 1))
+raw_rice_pop = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "population.csv"), skipto=2, header = 1))
+raw_rice_ei = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "emissions_intensity.csv"), skipto=2, header = 1))
+regions = ["US","EU","Japan","Russia","Eurasia","China","India","Mideast","Africa","Latam","OHI","Othasia"]
 
-rice = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "KayaBackStopTFP.csv"), skipto=2, header = 1))
+function df_interp(df)
+    filldf = fill(0.::Float64, end_year-start_year+1)
+    output = DataFrame(years = [start_year:1:end_year;],US= filldf,EU= filldf,Japan= filldf,Russia= filldf,Eurasia= filldf,China= filldf,India= filldf,Mideast= filldf,Africa= filldf,Latam= filldf,OHI= filldf,Othasia= filldf)
+    for i in regions
+        f = LinearInterpolation(df[1:32,1], df[1:32,i])
+        for j in ssp[:,1]
+            output[j,i] = f(j)
+        end
+    end
+    return(output)
+end
+df_interp(raw_rice_gdp)
 
-
+raw_rice_gdp[:,1]
 
 ##########
 # Damage to GDP function   
