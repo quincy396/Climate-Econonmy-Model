@@ -42,6 +42,10 @@ include(joinpath(@__DIR__, "helper_functions.jl"))
 
     co2_emissions = co2_emissions8
    
+
+
+    Init = DataFrame(CSV.File(normpath(@__DIR__,"..","data", ("Initial_"*string(start_year)*".csv")), footerskip =1, header = 1))
+
 #######################################################################################################
 # SET KAYA AND SOLOW MODEL 
 ########################################################################################################
@@ -124,7 +128,7 @@ function run_model(emiss_control_rate, elasticity)
     # gdp and abatement cost results
     GDP = filldf, abate_cost = filldf, net_GDP = filldf, K = filldf,
     #kaya
-    CO2_emiss = filldf, damages = filldf)
+    CO2_emiss = filldf, damages = filldf, investment = filldf, consumption = filldf)
 
 
     #Loop through the model
@@ -141,7 +145,7 @@ function run_model(emiss_control_rate, elasticity)
 
             # Set GDP and K
             output[t,"K"] = 223000
-            output[t,"GDP"] = Y_original[1]
+            output[t,"GDP"] = Solow_A[t]*L_original[t]^(1-Solow_a)*output[t,"K"]^Solow_a
 
             sigma = ssp[t, "Emiss/Ener"] * ssp[t, "Ener/GDP"]  * (44/12) #* 1000
             abate_cost_coeff = ssp[t, "Backstop"] * sigma / 2.6
@@ -155,39 +159,32 @@ function run_model(emiss_control_rate, elasticity)
 
 
             # Initialise the carbon pools to be correct for first timestep in numerical method (this is not in the paper, but taken from original FAIR source code).
-            output[t, "R1"] = a[1] * output[t,"CO2_emiss"] / ppm2gtc * 0.5
-            output[t, "R2"] = a[2] * output[t,"CO2_emiss"] / ppm2gtc * 0.5
-            output[t, "R3"] = a[3] * output[t,"CO2_emiss"] / ppm2gtc * 0.5
-            output[t, "R4"] = a[4] * output[t,"CO2_emiss"] / ppm2gtc * 0.5
+            output[t, "R1"] = Init[t,"R1"]
+            output[t, "R2"] = Init[t,"R2"]
+            output[t, "R3"] = Init[t,"R3"]
+            output[t, "R4"] = Init[t,"R4"]
 
             # Initial state-dependent scaling factor.
-            output[t,"alpha"] = 1e-10
+            output[t,"alpha"] = Init[t,"alpha"]
 
-            # Initial atmospheric CO2 concentration.
-            output[t,"CO2"] = CO2_0
+            # Initical atmospheric CO2 concentration.
+            output[t,"CO2"] = Init[t,"CO2"]
 
             # Initial carbon stock perturbation.
-            output[t,"Cacc"] = output[t,"CO2_emiss"]
+            output[t,"Cacc"] = Init[t,"Cacc"]
 
             #--------------------------------#
             #----INITIAL CLIMATE DYNAMICS----#
             #--------------------------------#
-            output[t,"CO2_rf"] = 0.0
-            output[t,"total_rf"] = 0.0
+            output[t,"CO2_rf"] = Init[t,"CO2_rf"]
+            output[t,"total_rf"] = Init[t,"total_rf"]
 
-            # Initial temperature change for two reponse times.
-            output[t,"temp_j1"] = 0.0
-            output[t,"temp_j2"] = 0.0
+            # Initial temperature change for two response times.
+            output[t,"temp_j1"] = Init[t,"temp_j1"]
+            output[t,"temp_j2"] = Init[t,"temp_j2"]
 
-            # Set initial surface temperature anomaly to 0.0.
-            output[t,"temperature"] = 0.0
-
-            damage_coefficient = 0.00236
-            real_temp = output[t,"temperature"]+0.85
-            income_elasticity = (output[t,"GDP"]/output[1,"GDP"])^elasticity
-            output[t,"damages"] = damage_coefficient*real_temp^2 * income_elasticity
-            #println(output[t,"damages"])
-            output[t,"net_GDP"] = output[t,"net_GDP"] - output[t,"damages"]*output[t,"GDP"]
+            # Set initial surface temperature anomaly.
+            output[t,"temperature"] = Init[t,"temperature"]
            
 
         else
@@ -271,10 +268,9 @@ function run_model(emiss_control_rate, elasticity)
             output[t,"temperature"] = output[t,"temp_j1"] + output[t,"temp_j2"]
             #println(output[t,"temperature"])
 
-
+            end
 
             # Damage to GDP function   
-            #DICE
 
             damage_coefficient = 0.00236
             real_temp = output[t,"temperature"]
@@ -282,9 +278,9 @@ function run_model(emiss_control_rate, elasticity)
             output[t,"damages"] = damage_coefficient*real_temp^2 * income_elasticity
             #println(output[t,"damages"])
             output[t,"net_GDP"] = output[t,"net_GDP"] - output[t,"damages"]*output[t,"GDP"]
-        
-            end
-            
+
+            output[t, "investment"] = output[t, "net_GDP"] * 0.22
+            output[t, "consumption"] = output[t, "net_GDP"] - output[t, "investment"]
             
         end
 
@@ -296,7 +292,7 @@ end
 my_results = run_model(fill(0.0,286),0)
 x = my_results[:,"years"]
 y = my_results[:,"temperature"]
-g = my_results[:,"net_GDP"]
+g = my_results[:,"consumption"]
 d = my_results[:,"damages"].*my_results[:,"GDP"]
 plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", legend=:topleft, ylab="degrees C")
 
@@ -305,23 +301,23 @@ plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", lege
 #Policies
 policy1 = fill(0.1,286)
 q1_0 = run_model(policy1, 0)
-g1 = q1_0[:, "net_GDP"]
+g1 = q1_0[:, "consumption"]
 benefit1 = g1 .- g
 
 policy2 = fill(0.2,286)
 q2_0 = run_model(policy2, 0)
-g2 = q2_0[:, "net_GDP"]
-benefit2 = g2 .- g0
+g2 = q2_0[:, "consumption"]
+benefit2 = g2 .- g
 
 policy3 = fill(0.3,286)
 q3_0 = run_model(policy3, 0)
-g3_0 = q3_0[:, "net_GDP"]
-benefit3 = g3_0 .- g0
+g3_0 = q3_0[:, "consumption"]
+benefit3 = g3_0 .- g
 
 policy4 = fill(0.4,286)
 q4_0 = run_model(policy4, 0)
-g4_0 = q4_0[:, "net_GDP"]
-benefit4 = g4_0 .- g0
+g4_0 = q4_0[:, "consumption"]
+benefit4 = g4_0 .- g
 
 filldf = fill(0.::Float64, 4)
 table = DataFrame(Policy = ["10%", "20%","30%","40%"], two_percent = filldf, three_percent = filldf, five_percent = filldf)
