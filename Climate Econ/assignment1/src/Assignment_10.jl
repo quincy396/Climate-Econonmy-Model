@@ -265,72 +265,105 @@ end
 ############
 #Co2 emissions
 #savings rate
-raw_rice_sr = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "savings_rate.csv"), skipto=2, header = 1))
-raw_rice_gdp = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "gdp.csv"), skipto=2, header = 1))
-raw_rice_pop = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "population.csv"), skipto=2, header = 1))
-raw_rice_ei = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "emissions_intensity.csv"), skipto=2, header = 1))
 regions = ["US","EU","Japan","Russia","Eurasia","China","India","Mideast","Africa","Latam","OHI","Othasia"]
 
 function df_interp(df)
     filldf = fill(0.::Float64, end_year-start_year+1)
     output = DataFrame(years = [start_year:1:end_year;],US= filldf,EU= filldf,Japan= filldf,Russia= filldf,Eurasia= filldf,China= filldf,India= filldf,Mideast= filldf,Africa= filldf,Latam= filldf,OHI= filldf,Othasia= filldf)
     for i in regions
-        f = LinearInterpolation(df[1:32,1], df[1:32,i])
-        for j in ssp[:,1]
-            output[j,i] = f(j)
+        println(i)
+        f = LinearInterpolation(df[:,1], df[:,i])
+        for j in 1:n_steps
+            output[j,i] = f(j+2014)
         end
     end
     return(output)
 end
-df_interp(raw_rice_gdp)
 
-raw_rice_gdp[:,1]
+raw_rice_sr = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "savings_rate.csv"), skipto=2, header = 1))
+short_rice_sr  = raw_rice_sr[(raw_rice_sr[!,"Year"].<= 2315), :]
+rice_sr = df_interp(short_rice_sr)
+raw_rice_gdp = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "gdp.csv"), skipto=2, header = 1))
+short_rice_gdp  = raw_rice_gdp[(raw_rice_gdp[!,"Year"].<= 2315), :]
+rice_gdp = df_interp(short_rice_gdp)
+raw_rice_pop = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "population.csv"), skipto=2, header = 1))
+short_rice_pop  = raw_rice_pop[(raw_rice_pop[!,"Year"].<= 2315), :]
+rice_pop = df_interp(short_rice_pop)
+raw_rice_ei = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "emissions_intensity.csv"), skipto=2, header = 1))
+short_rice_ei  = raw_rice_ei[(raw_rice_ei[!,"Year"].<= 2315), :]
+rice_ei = df_interp(short_rice_ei)
+
+rice_ei[:,"US"].*rice_gdp[:,"US"]
+CO2_emiss = fill(0.::Float64, end_year-start_year+1)
+for i in regions
+    CO2_emiss += rice_ei[:,i].*rice_gdp[:,i]
+end
+CO2_emiss
+
+ssp
+ssp[:,"Population"].*ssp[:,"GDP/Pop"].*ssp[:,"Ener/GDP"].*ssp[:,"Emiss/Ener"]
+##############
+#temperature
+
+my_results = run_model(CO2_emiss,fill(0.::Float64, n_steps))
+temp = my_results[:,"temperature"]
 
 ##########
 # Damage to GDP function   
 #DICE
+filldf = fill(0.::Float64, end_year-start_year+1)
+dc_0 = [0,0,0,0,0,0.078,0.439,0.278,0.341,0.061,0,0.176]
+dc_1 = [0.141413, 0.159, 0.162, 0.115,0.130, 0.126,0.169,0.159,0.198,0.135,0.156,0.173]
+damages = DataFrame(years = [start_year:1:end_year;],US= filldf,EU= filldf,Japan= filldf,Russia= filldf,Eurasia= filldf,China= filldf,India= filldf,Mideast= filldf,Africa= filldf,Latam= filldf,OHI= filldf,Othasia= filldf)
+consumption = DataFrame(years = [start_year:1:end_year;],US= filldf,EU= filldf,Japan= filldf,Russia= filldf,Eurasia= filldf,China= filldf,India= filldf,Mideast= filldf,Africa= filldf,Latam= filldf,OHI= filldf,Othasia= filldf)
+damageshare = DataFrame(years = [start_year:1:end_year;],US= filldf,EU= filldf,Japan= filldf,Russia= filldf,Eurasia= filldf,China= filldf,India= filldf,Mideast= filldf,Africa= filldf,Latam= filldf,OHI= filldf,Othasia= filldf)
 
-
-damage_coefficient = 0.00236
-savings = 0.22
-real_temp = output[t,"temperature"]
-income_elasticity = (output[t,"GDP"]/output[1,"GDP"])^elasticity
-output[t,"damages"] = damage_coefficient*real_temp^2 * income_elasticity*output[t,"GDP"]
-#println(output[t,"damages"])
-output[t,"net_GDP"] = output[t,"net_GDP"] - output[t,"damages"]
-output[t,"investment"] = output[t,"net_GDP"]*savings
-output[t,"consumption"] = output[t,"net_GDP"] - output[t,"investment"]
-percap_cons = output[t,"consumption"]/population
-
-
-
-
-
-
+for i in 1:12
+    for j in 1:n_steps
+        damageshare[j,regions[i]] = (dc_0[i]*temp[j] + dc_1[i]*temp[j]^2)/100
+        damages[j,regions[i]] = damageshare[j,regions[i]]*rice_gdp[j,regions[i]]*1000
+        net_gdp = rice_gdp[j,regions[i]]*1000 - damages[j,regions[i]]
+        consumption[j,regions[i]] = net_gdp *(1-rice_sr[j,regions[i]])
+    end
+end
+rice_sr
+rice_gdp[:,"US"]*1000
+damages
+consumption
+damageshare
 
 ########
 # Social Cost of Carbon
 
-add2020 = fill(0.0,n_steps)
-add2020[6] = 1
+add2020 = CO2_emiss
+add2020[6] += 1
 add2020
 
-q1 = run_model(fill(0.0,n_steps),0,add2020)
-q1_d = q1[:,"damages"]
-d_diff = q1_d[6:end]-myd[6:end]
+q1 = run_model(add2020,0)
+temp2 = q1[:,"temperature"]
 
-c = [0.025,0.03,0.05]
-costs = []
-
-for i in 1:3
-    discounted = []
-    for k in 1:length(d_diff)
-        discounted = append!(discounted,d_diff[k]/((1+c[i])^(k-1)))
+damages2 = DataFrame(years = [start_year:1:end_year;],US= filldf,EU= filldf,Japan= filldf,Russia= filldf,Eurasia= filldf,China= filldf,India= filldf,Mideast= filldf,Africa= filldf,Latam= filldf,OHI= filldf,Othasia= filldf)
+for i in 1:12
+    for j in 1:n_steps
+        damages2[j,regions[i]] = (dc_0[i]*temp2[j] + dc_1[i]*temp2[j]^2)/100*rice_gdp[j,regions[i]]*1000
     end
-    costs = append!(costs, sum(discounted))
 end
-costs
-co2_costs = costs.*(12/44)
+damages2
+damages
+(damages2[:,"US"]- damages[:,"US"])./consumption[:,"US"]
 
+SCC_utils = 0
+for i in regions
+    for j in 1:n_steps
+        SCC_utils += (damages2[j,i]-damages[j,i])*(1/consumption[j,i])*(1/1.025^(j-6))
+    end
+end
+SCC_utils
+
+SCC_r = DataFrame(consumption[6,:])
+for i in regions
+    SCC_r[1,i] = SCC_r[1,i]*SCC_utils*12/44
+end
+SCC_r
 
 

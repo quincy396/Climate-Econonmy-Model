@@ -297,7 +297,7 @@ plot(x,y,  title = "Global av Temperature above 2015", label = "Our model", lege
 
 my_results[:,"CO2_emiss"]
 my_results
-
+my_results[:,"damages"]./my_results[:,"GDP"]
 
 
 
