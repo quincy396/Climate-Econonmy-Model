@@ -317,7 +317,6 @@ consumption = my_results[6:end,"consumption"]
 # Question 1
 
 eta = 1
-p = 0.01
 p = [0.0,0.01,0.03]
 costs = []
 
@@ -351,3 +350,85 @@ co2_costs_9 = costs.*(12/44)
 all_costs = append!(co2_costs_11, co2_costs_9)
 
 plot(x, all_costs,  title = "SCCO2", label = ["Ramsey0" "Ramsey1" "Ramsey3" "Discount25" "Discount3" "Discount5"], legend=:topleft, ylab="Billion Dollars")
+
+
+
+######
+#Question 3
+
+#normal q
+q = [0.33, 0.41] 
+
+#high q
+q = [0.57, 0.63] 
+
+q3_high = run_model(fill(0.0,n_steps),0,fill(0.0,n_steps))
+high_d = q3_high[:,"damages"]
+q3_high_add = run_model(fill(0.0,n_steps),0,add2020)
+high_add_d = q3_high_add[:,"damages"]
+d_diff = high_add_d[6:end]-high_d[6:end]
+
+eta = 1
+p = [0.0,0.01,0.03]
+costs = []
+
+for i in 1:3
+    discounted = []
+    for k in 1:length(d_diff)
+        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^k)
+        discounted = append!(discounted, d_diff[k]*discount_factor)
+    end
+    costs = append!(costs, sum(discounted))
+end
+costs
+co2_costs_11 = costs.*(12/44)
+
+c = [0.025,0.03,0.05]
+costs = []
+
+for i in 1:3
+    discounted = []
+    for k in 1:length(d_diff)
+        discounted = append!(discounted,d_diff[k]/((1+c[i])^(k-1)))
+    end
+    costs = append!(costs, sum(discounted))
+end
+costs
+co2_costs = costs.*(12/44)
+
+#low q
+q = [0.14, 0.26] 
+
+q3_low = run_model(fill(0.0,n_steps),0,fill(0.0,n_steps))
+low_d = q3_low[:,"damages"]
+q3_low_add = run_model(fill(0.0,n_steps),0,add2020)
+low_add_d = q3_low_add[:,"damages"]
+d_diff = low_add_d[6:end]-low_d[6:end]
+
+eta = 1
+p = [0.0,0.01,0.03]
+costs = []
+
+for i in 1:3
+    discounted = []
+    for k in 1:length(d_diff)
+        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^k)
+        discounted = append!(discounted, d_diff[k]*discount_factor)
+    end
+    costs = append!(costs, sum(discounted))
+end
+costs
+co2_costs_11 = costs.*(12/44)
+
+c = [0.025,0.03,0.05]
+costs = []
+
+for i in 1:3
+    discounted = []
+    for k in 1:length(d_diff)
+        discounted = append!(discounted,d_diff[k]/((1+c[i])^(k-1)))
+    end
+    costs = append!(costs, sum(discounted))
+end
+costs
+co2_costs = costs.*(12/44)
