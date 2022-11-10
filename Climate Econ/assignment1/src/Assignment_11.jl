@@ -323,7 +323,7 @@ costs = []
 for i in 1:3
     discounted = []
     for k in 1:length(d_diff)
-        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^k)
+        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^(k-1))
         discounted = append!(discounted, d_diff[k]*discount_factor)
     end
     costs = append!(costs, sum(discounted))
@@ -334,22 +334,29 @@ co2_costs_11 = costs.*(12/44)
 
 ##########
 #Question2
-c = [0.025,0.03,0.05]
-costs = []
+filldf = fill(0.::Float64, end_year-start_year+1-5)
+costs = DataFrame(years = [2020:1:end_year;], r0 = filldf,r1 = filldf,r3 = filldf,d25 = filldf,d3 = filldf,d5 = filldf)
 
+names = ["r0","r1","r3"]
 for i in 1:3
-    discounted = []
     for k in 1:length(d_diff)
-        discounted = append!(discounted,d_diff[k]/((1+c[i])^(k-1)))
+        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^(k-1))
+        costs[k,names[i]] =  d_diff[k]*discount_factor*(12/44)
     end
-    costs = append!(costs, sum(discounted))
 end
+
 costs
-co2_costs_9 = costs.*(12/44)
+names = ["d25","d3","d5"]
+c = [0.025,0.03,0.05]
+for i in 1:3
+    for k in 1:length(d_diff)
+        costs[k,names[i]] = d_diff[k]/((1+c[i])^(k-1))*(12/44)
+    end
+end
 
-all_costs = append!(co2_costs_11, co2_costs_9)
-
-plot(x, all_costs,  title = "SCCO2", label = ["Ramsey0" "Ramsey1" "Ramsey3" "Discount25" "Discount3" "Discount5"], legend=:topleft, ylab="Billion Dollars")
+d_diff
+costs
+plot(x[6:end], [ costs[:,2] costs[:,3] costs[:,4] costs[:,5] costs[:,6] costs[:,7]],  title = "SCCO2", label = ["Ramsey0" "Ramsey1" "Ramsey3" "Discount25" "Discount3" "Discount5"], legend=:topright, ylab="Billion Dollars")
 
 
 
@@ -375,7 +382,7 @@ costs = []
 for i in 1:3
     discounted = []
     for k in 1:length(d_diff)
-        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^k)
+        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^(k-1))
         discounted = append!(discounted, d_diff[k]*discount_factor)
     end
     costs = append!(costs, sum(discounted))
@@ -412,7 +419,7 @@ costs = []
 for i in 1:3
     discounted = []
     for k in 1:length(d_diff)
-        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^k)
+        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^(k-1))
         discounted = append!(discounted, d_diff[k]*discount_factor)
     end
     costs = append!(costs, sum(discounted))
