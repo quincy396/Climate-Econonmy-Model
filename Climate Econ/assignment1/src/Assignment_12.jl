@@ -1,7 +1,7 @@
 # Set you working directory to the folder where you have the 'data' and 'src' folders with cd("path to that folder"), check with pwd()
 # The first time you have to run: import Pkg, then Pkg.add(["CSV", "DataFrames", "Roots", "Plots"])
 
-using CSV, DataFrames, Roots, Plots, Interpolations, Statistics
+using CSV, DataFrames, Roots, Plots, Interpolations, Statistics, Random
 
 include(joinpath(@__DIR__, "helper_functions.jl"))
 ############################################################################################################
@@ -116,7 +116,7 @@ Init = DataFrame(CSV.File(normpath(@__DIR__,"..","data", ("Initial_2015.csv")), 
 
 # run_model = function(CO2_emiss){
 
-function run_model(emiss_control_rate, elasticity, co2_add)
+function run_model(emiss_control_rate, elasticity, co2_add,q)
 
 
 
@@ -303,143 +303,43 @@ my_results[:,"damages"]./my_results[:,"GDP"]
 ################
 #import 
 
+df = DataFrame(CSV.File(normpath(@__DIR__,"..", "data", "TCRECS_q_values100.csv"), skipto=2, header = 1))
 
 
-########
-# Social Cost of Carbon
-
-add2020 = fill(0.0,n_steps)
-add2020[6] = 1
-add2020
-q1 = run_model(fill(0.0,n_steps),0,add2020)
-q1_d = q1[:,"damages"]
-d_diff = q1_d[6:end]-myd[6:end]
-
-consumption = my_results[6:end,"consumption"]
-
-######
-# Question 1
-
-eta = 1
-p = [0.0,0.01,0.03]
-costs = []
-
-for i in 1:3
+############
+#function
+function sccinator(q)
+    q0 = run_model(fill(0.0,n_steps),0,fill(0.0,n_steps), q)
+    d0 = q0[:,"damages"]
+    q1 = run_model(fill(0.0,n_steps),0,add2020,q)
+    d1 = q1[:,"damages"]
+    d_diff = d1[6:end]-d0[6:end]
+    consumption = q0[6:end,"consumption"]
     discounted = []
     for k in 1:length(d_diff)
-        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^(k-1))
+        discount_factor = (consumption[1]/consumption[k])^eta / ((1+0.01)^(k-1))
         discounted = append!(discounted, d_diff[k]*discount_factor)
     end
-    costs = append!(costs, sum(discounted))
-end
-costs
-co2_costs_11 = costs.*(12/44)
+    cost =  sum(discounted)*(12/44)
 
-
-##########
-#Question2
-filldf = fill(0.::Float64, end_year-start_year+1-5)
-costs = DataFrame(years = [2020:1:end_year;], r0 = filldf,r1 = filldf,r3 = filldf,d25 = filldf,d3 = filldf,d5 = filldf)
-
-names = ["r0","r1","r3"]
-for i in 1:3
-    for k in 1:length(d_diff)
-        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^(k-1))
-        costs[k,names[i]] =  d_diff[k]*discount_factor*(12/44)
-    end
+    return(cost)
 end
 
-costs
-names = ["d25","d3","d5"]
-c = [0.025,0.03,0.05]
-for i in 1:3
-    for k in 1:length(d_diff)
-        costs[k,names[i]] = d_diff[k]/((1+c[i])^(k-1))*(12/44)
-    end
+
+#####
+ndf = copy(df)
+
+for i in 1:100
+    num = rand(1:100)
+    ndf[i,:] = df[num,:]
+    q = [ndf[i,"q1"],ndf[i,"q2"]]
+    scc = sccinator(q)
+    ndf[i,"SCC"] = scc
+    
 end
+ndf
 
-d_diff
-costs
-plot(x[6:end], [ costs[:,2] costs[:,3] costs[:,4] costs[:,5] costs[:,6] costs[:,7]],  title = "SCCO2", label = ["Ramsey0" "Ramsey1" "Ramsey3" "Discount25" "Discount3" "Discount5"], legend=:topright, ylab="Billion Dollars")
-
-
-
-######
-#Question 3
-
-#normal q
-q = [0.33, 0.41] 
-
-#high q
-q = [0.57, 0.63] 
-
-q3_high = run_model(fill(0.0,n_steps),0,fill(0.0,n_steps))
-high_d = q3_high[:,"damages"]
-q3_high_add = run_model(fill(0.0,n_steps),0,add2020)
-high_add_d = q3_high_add[:,"damages"]
-d_diff = high_add_d[6:end]-high_d[6:end]
-
-eta = 1
-p = [0.0,0.01,0.03]
-costs = []
-
-for i in 1:3
-    discounted = []
-    for k in 1:length(d_diff)
-        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^(k-1))
-        discounted = append!(discounted, d_diff[k]*discount_factor)
-    end
-    costs = append!(costs, sum(discounted))
-end
-costs
-co2_costs_11 = costs.*(12/44)
-
-c = [0.025,0.03,0.05]
-costs = []
-
-for i in 1:3
-    discounted = []
-    for k in 1:length(d_diff)
-        discounted = append!(discounted,d_diff[k]/((1+c[i])^(k-1)))
-    end
-    costs = append!(costs, sum(discounted))
-end
-costs
-co2_costs = costs.*(12/44)
-
-#low q
-q = [0.14, 0.26] 
-
-q3_low = run_model(fill(0.0,n_steps),0,fill(0.0,n_steps))
-low_d = q3_low[:,"damages"]
-q3_low_add = run_model(fill(0.0,n_steps),0,add2020)
-low_add_d = q3_low_add[:,"damages"]
-d_diff = low_add_d[6:end]-low_d[6:end]
-
-eta = 1
-p = [0.0,0.01,0.03]
-costs = []
-
-for i in 1:3
-    discounted = []
-    for k in 1:length(d_diff)
-        discount_factor = (consumption[1]/consumption[k])^eta / ((1+p[i])^(k-1))
-        discounted = append!(discounted, d_diff[k]*discount_factor)
-    end
-    costs = append!(costs, sum(discounted))
-end
-costs
-co2_costs_11 = costs.*(12/44)
-
-c = [0.025,0.03,0.05]
-costs = []
-
-for i in 1:3
-    discounted = []
-    for k in 1:length(d_diff)
-        discounted = append!(discounted,d_diff[k]/((1+c[i])^(k-1)))
-    end
-    costs = append!(costs, sum(discounted))
-end
-costs
-co2_costs = costs.*(12/44)
+scc_estimates = ndf[:,"SCC"]
+mean(scc_estimates)
+std(scc_estimates)
+histogram(scc_estimates, title = "Historgram of Monte Carlo SCCs", xlabel = "SCC (dollar per tCO2)", ylabel = "frequency")
